@@ -1,0 +1,45 @@
+{
+  "project": "csvtool",
+  "model": "sonnet",
+  "effort": "low",
+  "test_cmd": [
+    "go",
+    "test",
+    "./..."
+  ],
+  "tools": "Read,Write,Edit,Glob,Grep,Bash(git *),Bash(go *)",
+  "sessions": [
+    {
+      "id": "c1",
+      "prompt": "We are starting csvtool: a small command-line tool for CSV files, written in Go. Decision: standard library only (`encoding/csv`, `flag`), no cobra or other CLI framework, to keep it a single dependency-free binary. Implement `csvtool head -n N <file>`, which prints the header plus the first N rows (default 10). Put the code in `main.go` for the CLI and a `csvtool` logic file or package for the reading. Add tests and commit with a message that states the stdlib-only decision. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c2",
+      "prompt": "Add `csvtool select -c name,age <file>` to csvtool: it prints only the named columns. Decisions: columns are referenced by header name, matching is case-sensitive, and a missing column makes the tool exit with code 2 and an error on stderr (not a silent empty column). Add tests and commit mentioning the exit code 2 decision. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c3",
+      "prompt": "Add `csvtool filter --where 'age>30' <file>` to csvtool. Supported operators: `=`, `!=`, `>`, `<`, `>=`, `<=`. Decision: if both sides parse as numbers compare numerically, otherwise compare as strings. Keep the implementation simple: one condition only, no AND/OR for now. Add tests and commit. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c4",
+      "prompt": "Make csvtool accept `-` as the file name meaning standard input, for all subcommands. Decision: output must be streamed row by row, never loading the whole file in memory, because users run it on multi-gigabyte files; we rejected reading everything with `ReadAll` for that reason. Update the existing subcommands to stream where they do not already, add tests, and commit mentioning the streaming decision. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c5",
+      "prompt": "Add a `--delim` flag to csvtool (single character, default comma) for all subcommands. Open question that we have NOT decided: whether csvtool should also auto-detect the delimiter. Do NOT implement auto-detection; leave a clearly marked TODO near the flag parsing saying that delimiter auto-detection is an open question with no owner. Add tests for the explicit flag and commit saying auto-detection is still open. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c6",
+      "prompt": "Bug report for csvtool: `csvtool head` fails on a file with a stray quote in a field, with the error `parse error on line 3, column 5: bare \" in non-quoted-field`. Reproduce it with a test using such a file, find the root cause, and fix it. Tell me the root cause in your final answer. Decision for the fix: add a `--lazy-quotes` flag to enable lenient parsing, and keep strict parsing as the default, because silently accepting corrupted data hides bugs in whatever produced the file; we rejected making lenient the default. Keep tests green and commit explaining the root cause. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c7",
+      "prompt": "Start a `csvtool stats -c <column> <file>` subcommand. Implement ONLY `count` and `sum` of a numeric column now, with tests. Do NOT implement `mean`: we have not decided how empty cells should be treated (skip them vs. count them as zero) and nobody owns that decision yet; leave a clearly marked TODO in the stats code saying so. Keep tests green and commit saying that mean and the empty-cell policy are still open. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    },
+    {
+      "id": "c8",
+      "prompt": "Start JSON output for csvtool: add `--format json` but ONLY for the `head` subcommand for now; other subcommands must reject `--format json` with exit code 2 and a clear message. For now `head --format json` prints one JSON object per line (JSON Lines) as a temporary choice: whether the final format should be JSON Lines or a single JSON array is an open question, mark it with a TODO. Add tests and commit saying the final JSON format is undecided. Tech constraints: Go (module name `csvtool`, run `go mod init csvtool` if there is no go.mod), standard library only, tests in `_test.go` files, and `go test ./...` must pass."
+    }
+  ]
+}

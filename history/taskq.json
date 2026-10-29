@@ -1,0 +1,39 @@
+{
+  "project": "taskq",
+  "model": "sonnet",
+  "effort": "low",
+  "sessions": [
+    {
+      "id": "s1",
+      "prompt": "We are starting a small Python 3 project called taskq: a persistent task queue with a CLI, standard library only, no third-party dependencies. Create the package `taskq/` with a SQLite storage module, a `storage.py` with an `enqueue(payload)` and `list_tasks()`, and a CLI (`python3 -m taskq add <text>` and `python3 -m taskq list`). Decision to follow and to keep in the code docs: we store tasks in SQLite and not in Redis or a JSON file, because it needs zero extra services, writes are atomic, and the queue must survive a reboot. Add unit tests with unittest in `tests/` and make sure `python3 -m unittest` passes. Then commit with a message that states the SQLite decision."
+    },
+    {
+      "id": "s2",
+      "prompt": "Add workers to taskq: `python3 -m taskq claim` returns the next pending task and marks it `running`, and `python3 -m taskq done <id>` marks it `done`. Decision: a claimed task gets a lease of 60 seconds; if the worker does not finish within the lease, the task becomes claimable again. We chose a lease instead of a heartbeat because it is simpler and a crashed worker needs no cleanup. Implement `claim` the simple way for now: one SELECT that finds the next claimable task and, in a separate statement, an UPDATE that marks it running (we will optimize later if it becomes a problem). Implement it, add tests, make `python3 -m unittest` pass, and commit with a message that mentions the 60 s lease decision."
+    },
+    {
+      "id": "s3",
+      "prompt": "Add priorities to taskq. Decision: priority is an integer 0-9 where 0 is the MOST urgent (like nice values), default 5, and claim order is priority ascending, then creation time. We rejected 'higher number = more urgent' because it conflicts with the nice convention our team already uses. Add `--priority` to `add`, update claim ordering and the list output, add tests, keep `python3 -m unittest` green, and commit mentioning the priority convention."
+    },
+    {
+      "id": "s4",
+      "prompt": "Bug report: when two workers run `claim` at the same time, the same task is sometimes handed to both. Reproduce it with a test that uses two threads or processes, find the root cause, and fix it. Please tell me the root cause in your final answer. (Hint from me: the SELECT of the next task and the UPDATE that marks it running are separate statements, so another worker can get in between; the fix we want is a single transaction opened with BEGIN IMMEDIATE, NOT an application-level lock file.) To make the race deterministic in the test you may add a small hook or sleep between the SELECT and the UPDATE. Keep tests green and commit with a message that explains the root cause."
+    },
+    {
+      "id": "s5",
+      "prompt": "Add retries to taskq: `python3 -m taskq fail <id>` records a failure and re-queues the task with exponential backoff. Decisions: maximum 3 attempts, backoff base 2 seconds (2s, 4s, 8s), and NO random jitter, because jitter makes the tests non-deterministic and we only have a handful of workers. After the third failure the task gets status `dead`. Implement it with tests, keep `python3 -m unittest` green, and commit mentioning the no-jitter decision."
+    },
+    {
+      "id": "s6",
+      "prompt": "Refactor taskq: move all SQL out of the CLI and out of module-level functions into a `Repository` class in `taskq/repository.py`; the CLI must only call the repository. Also change the default database path from `./tasks.db` to `~/.taskq/queue.db`, overridable with the environment variable TASKQ_DB. Reason: running from different folders created several databases by accident. Update the tests (use TASKQ_DB pointing at a temp dir), keep everything green, and commit explaining the reason for the path change."
+    },
+    {
+      "id": "s7",
+      "prompt": "Add machine-readable output to taskq: `list --json` and `claim --json` print JSON. Decision: every JSON document carries a top-level `\"v\": 1` schema version field so we can evolve the format without breaking scripts; we rejected bare arrays for that reason. Add tests, keep green, and commit mentioning the schema version decision."
+    },
+    {
+      "id": "s8",
+      "prompt": "Start a dead-letter feature in taskq: tasks with status `dead` should be listable with `python3 -m taskq dead`. Implement ONLY the listing and its test now. Do NOT implement purging or requeueing dead tasks: we have not decided the purge policy yet (keep forever vs. expire after N days; nobody owns this decision), so leave a clearly marked TODO in `taskq/repository.py` that says the purge policy is an open question. Keep tests green and commit saying that the purge policy is still open."
+    }
+  ]
+}

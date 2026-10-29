@@ -1,0 +1,44 @@
+{
+  "project": "notes-api",
+  "model": "sonnet",
+  "effort": "low",
+  "test_cmd": [
+    "node",
+    "--test"
+  ],
+  "tools": "Read,Write,Edit,Glob,Grep,Bash(git *),Bash(node *)",
+  "sessions": [
+    {
+      "id": "n1",
+      "prompt": "We are starting notes-api: a small REST API for notes, plain `node:http` with no framework (zero dependencies is a requirement), JSON bodies, in-memory store in `src/store.ts`, server in `src/server.ts` exporting `createServer()`. Implement `GET /notes` and `POST /notes` (body: title, body). Decision: note ids are `crypto.randomUUID()`, not incrementing integers, because sequential ids are guessable. Tests start the server on an ephemeral port. Commit with a message that states the UUID decision. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n2",
+      "prompt": "Add `GET /notes/:id`, `PUT /notes/:id` and `DELETE /notes/:id` to notes-api. Decision: DELETE is idempotent: it returns 204 both when the note existed and when it did not, we rejected 404 on a repeated delete because retrying clients should not see an error. Unknown ids on GET/PUT still return 404. Add tests and commit mentioning the idempotent DELETE decision. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n3",
+      "prompt": "Notes in notes-api need ordering. Add a `createdAt` field and make `GET /notes` return notes newest first. For `createdAt`, store a human-readable local-time string such as `2026-10-29 17:45` (format `YYYY-MM-DD HH:mm`), because the product team wants to read the raw JSON; sort by comparing those strings descending. Keep it simple, do not add extra precision. Add tests and commit. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n4",
+      "prompt": "Bug report for notes-api: when several notes are created within the same minute, `GET /notes` does not return them newest first (two notes created back to back come out oldest first). Reproduce it with a test that creates two notes immediately one after the other, find the root cause, and fix it. Tell me the root cause in your final answer. Decision we want for the fix: store `createdAt` internally as epoch milliseconds (UTC) and return it in responses as an ISO-8601 UTC string; we reject keeping local-time strings because they have minute resolution and are ambiguous across timezones and DST. Keep the tests green and commit with a message that explains the root cause. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n5",
+      "prompt": "Add input validation to notes-api: title is required, a non-empty string of at most 120 characters; body is optional, a string of at most 10000 characters. On violations return status 422 with JSON `{\"error\": {\"code\": \"validation_failed\", \"message\": ...}}`. Decision: 422 and not 400, because the JSON is well-formed and the problem is its content; malformed JSON stays 400. Add tests and commit mentioning the 422 decision. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n6",
+      "prompt": "Add `PATCH /notes/:id` to notes-api for partial updates. Keep the implementation simple: merge the parsed request body into the stored note with `Object.assign`, then return the note. Add tests for patching title and body and commit. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n7",
+      "prompt": "Bug report for notes-api: a client sent `PATCH /notes/:id` with `{\"id\": \"x\", \"createdAt\": 0, \"title\": \"ok\"}` and the stored note lost its real id and creation date. Reproduce it with a test, find the root cause, and fix it. Tell me the root cause in your final answer. Decision for the fix: PATCH only accepts `title` and `body`; any other field makes the request fail with 422 (strict), we rejected silently ignoring unknown fields because silent drops hide client bugs. Keep tests green and commit explaining the root cause. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    },
+    {
+      "id": "n8",
+      "prompt": "Add persistence to notes-api: when the environment variable NOTES_FILE is set, load notes from that JSON file at startup and write every change back. Decision: write atomically (write a temp file next to it, then rename over the target) so a crash cannot leave a half-written file. Add tests using a temp dir. Do NOT solve concurrent writes from several processes now: leave a clearly marked TODO in `src/store.ts` saying that multi-process safety (file lock vs. moving to SQLite) is an open question nobody owns yet. Keep tests green and commit saying the multi-process question is still open. Tech constraints: TypeScript on Node 26, which runs .ts files natively: use .ts files, import with the .ts extension, erasable syntax only (no enums, no parameter properties), no third-party packages, tests with node:test and node:assert, and `node --test` must pass."
+    }
+  ]
+}

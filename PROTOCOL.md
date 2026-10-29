@@ -1,0 +1,111 @@
+# Evaluation protocol: does a persistent session memory reduce the cost of coding-agent sessions?
+
+Status: DRAFT. Sections 1-6 are frozen (pre-registered) by a dated git tag `prereg-v1`
+before Phase 4 starts. After that tag, changes go in an "Amendments" section, never in place.
+
+## 1. Research questions and hypotheses
+
+| ID | Question | Hypothesis |
+|---|---|---|
+| RQ1 | How much does the memory system reduce input cost per task? | H1: total input tokens (new + cache creation + cache read) drop on history-dependent tasks (A, B). |
+| RQ2 | Does answer quality hold? | H2: quality on A and B is not lower than C0 (non-inferiority margin: 0.25 rubric points / 5 pp test pass rate). |
+| RQ3 | Which component carries the effect? | H3: the digest explains most of the reduction; the session list alone does not. |
+| RQ4 | When does it hurt? | H4: on history-independent tasks (C) it adds a small fixed cost; on stale-memory tasks (D) quality drops. |
+| RQ5 | Does the effect depend on model size? | H5: the relative input-cost reduction is larger for Haiku than for Opus (condition x model interaction). |
+
+## 2. System under test
+
+`claude-brain` (this repo's sibling): SQLite+FTS5 archive, automatic digests, SessionStart
+briefing (digest + session list), recall skill. Version pinned by commit in every run's `meta.json`.
+
+## 3. Conditions
+
+| ID | Condition |
+|---|---|
+| C0 | No brain: no hooks, no briefing, no recall skill |
+| C1 | Session list only |
+| C2 | Digest only |
+| C3 | Digest + session list (default configuration) |
+| C4 | C3 + recall skill available |
+| C5 | Static-notes baseline: same content as the digest, placed in the project's `CLAUDE.md`, no brain |
+
+## 4. Subject projects and history
+
+Three small synthetic projects with different stacks and history profiles (decisions and
+refactors; bugs and causes; unfinished work). Each history is a fixed script of 6-10 sessions
+run through `claude -p` with persistence so the hooks ingest them and the digests form
+naturally. Each session ends in a commit. The resulting repo + brain database are frozen as a
+snapshot; every run starts from a fresh copy of it, in an isolated config dir and brain data dir,
+in a working directory OUTSIDE the user's home tree (see section 8, leak of global instructions).
+
+## 5. Tasks
+
+Categories (8-10 tasks per category overall, spread evenly over the three projects):
+- **A** history recall ("what was decided about X and why?")
+- **B** work continuation, verifiable by tests
+- **C** history-independent tasks solvable from the code alone
+- **D** adversarial: a commit made after the snapshot contradicts the digest (stale memory)
+
+Every task has a reference answer or an automated oracle written BEFORE any measurement.
+
+## 6. Runs, metrics, analysis
+
+- Run unit: `(task, condition, rep, model, effort)`. Order randomized, seed in `bench/matrix.json`.
+- Subject models, all at low effort (same instruction, though "low" is not equivalent across
+  models; declared in section 8): Haiku and Sonnet run the full design (5 reps). Opus runs a
+  pre-fixed subset (12 tasks, 3 per category), conditions C0/C3/C5 only, 3 reps (108 runs).
+  The Opus subset size is subject to the pilot: it is adjusted to the runs that fit the
+  subscription quota, and frozen with `prereg-v1`. Cross-model comparisons use only tasks and
+  conditions shared by the models compared. Primary model-dependence test: the
+  `condition x model` interaction. Histories generated with Sonnet (low).
+  Judges: a different model than the one answering; human check on a subsample; report Cohen's kappa.
+- Cost metrics: new input, cache creation, cache read, output tokens, turns, latency, and the
+  CLI's `total_cost_usd` (relative cost only: the subscription is not billed per token).
+  Cold-cache and warm-cache reported separately.
+- Quality: 0-2 rubric (A, D) by two blind judges; test pass rate (B, C).
+- Joint: cost per correct answer.
+- Stats: mixed model `metric ~ condition + category + (1|task)`, bootstrap CIs, effect sizes,
+  Holm correction for pairwise comparisons against C0 and C5. Negative results reported.
+- A run that hits the subscription quota is logged `status=quota` and retried; it is never data.
+
+## 7. Evidence (per run, `runs/raw/<run_id>/`)
+
+`transcript.jsonl.zst` (stream-json of every turn and tool call), `briefing.txt` (exact injected
+context, empty for C0), `answer.txt`, `diff.patch` (if files changed), `tests.txt` (if any),
+`stderr.txt`, `meta.json` (model id resolved, effort, Claude Code version, brain commit,
+snapshot hash, prompt hash, timestamps, exit status). `runs/MANIFEST.sha256` holds a SHA-256 per
+file; `verify.py` re-checks hashes and rebuilds every table and figure from raw data.
+Home paths, user name and email are redacted before publishing. Release archive: Zenodo (DOI).
+
+## 8. Threats to validity (declared)
+
+Single author and synthetic projects; LLM-generated histories are more uniform than human ones;
+results are for the pinned model versions and dates; LLM-judge bias; histories and tasks share
+an author (mitigated by writing oracles first); a small model may benefit more than a large one; low effort understates the capability of large
+models, so conclusions about them hold only at low effort; the Opus arm is a subset.
+
+Isolation lessons learned in P1 (kept as methodological notes):
+- Claude Code loads `.claude/CLAUDE.md` of every ancestor of the working directory, so any path under
+  the real home inherits the user's global instructions regardless of `CLAUDE_CONFIG_DIR`/`HOME`.
+  Detected because replies came in Spanish and the digest mentioned the global rules. Two contaminated
+  history attempts were archived (`projects/taskq.attempt1`, `.attempt2`). Every run is checked for leaks.
+- The digest model runs `claude -p` from the brain database's folder, so that folder must also be outside
+  the home tree; a first notes-api digest leaked the global rules this way. Digests are regenerated from a
+  copy of the database with the old digests removed (`redigest.py`), because a previous digest is fed to the next.
+- A scripted bug must exist in the code before its fix is requested; a model that cannot reproduce a
+  bug rightly refuses to commit a fix (attempt 1).
+
+## 9. Phases and exit criteria
+
+- [ ] **P0** Repo, protocol, task checklist, runner skeleton. Exit: `status.py` and `run.py --dry-run` work.
+- [ ] **P1** (taskq, notes-api: history done and leak-checked; csvtool pending) Three projects + history scripts + frozen snapshots. Exit: tests pass at every history commit; digests reviewed by hand.
+- [ ] **P2** Task bank with oracles/rubrics. Exit: every B/C oracle passes on the reference solution and fails on the base commit.
+- [ ] **P3** Pilot (about 10 tasks x 6 conditions x 3 reps, Haiku and Sonnet; a few Opus runs to measure quota use). Exit: measured size per run, variance estimate, power check, runs of Opus per quota window, protocol fixes.
+- [ ] **P4** Pre-register (`prereg-v1` tag), then main experiment in resumable batches.
+- [ ] **P5** Judging.
+- [ ] **P6** Analysis (`analysis/`, regenerated by one command).
+- [ ] **P7** Paper.
+
+## Amendments
+
+(none yet)

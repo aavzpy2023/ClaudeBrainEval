@@ -1,0 +1,11 @@
+{
+  "seed": 20261029,
+  "conditions": ["C0", "C1", "C2", "C3", "C4", "C5"],
+  "arms": [
+    {"name": "haiku", "model": "haiku", "effort": "low", "reps": 5, "phases": ["pilot", "main"]},
+    {"name": "sonnet-low", "model": "sonnet", "effort": "low", "reps": 5, "phases": ["pilot", "main"]},
+    {"name": "opus-low", "model": "opus", "effort": "low", "reps": 3, "phases": ["main"],
+     "conditions": ["C0", "C3", "C5"], "task_subset": "opus"}
+  ],
+  "pilot_reps": 3
+}
