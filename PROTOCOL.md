@@ -95,10 +95,16 @@ Isolation lessons learned in P1 (kept as methodological notes):
 - A scripted bug must exist in the code before its fix is requested; a model that cannot reproduce a
   bug rightly refuses to commit a fix (attempt 1).
 
+Snapshot provenance: the synthetic projects are published as `snapshots/<project>/repo.bundle`
+(branch `main`) next to the frozen `brain.db`. Their commits were generated with the agent's default
+trailers and a placeholder author; before publishing they were rewritten to carry the repository
+owner's identity and no trailers. `commit-map.txt` maps each original hash to the published one. Digests
+and archived transcripts are raw evidence and still cite the original hashes; use the map to translate.
+
 ## 9. Phases and exit criteria
 
 - [ ] **P0** Repo, protocol, task checklist, runner skeleton. Exit: `status.py` and `run.py --dry-run` work.
-- [ ] **P1** (taskq, notes-api: history done and leak-checked; csvtool pending) Three projects + history scripts + frozen snapshots. Exit: tests pass at every history commit; digests reviewed by hand.
+- [ ] **P1** (histories for taskq, notes-api and csvtool done, leak-checked and frozen; only the final review of the digests is pending) Three projects + history scripts + frozen snapshots. Exit: tests pass at every history commit; digests reviewed by hand.
 - [ ] **P2** Task bank with oracles/rubrics. Exit: every B/C oracle passes on the reference solution and fails on the base commit.
 - [ ] **P3** Pilot (about 10 tasks x 6 conditions x 3 reps, Haiku and Sonnet; a few Opus runs to measure quota use). Exit: measured size per run, variance estimate, power check, runs of Opus per quota window, protocol fixes.
 - [ ] **P4** Pre-register (`prereg-v1` tag), then main experiment in resumable batches.
