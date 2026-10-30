@@ -1,0 +1,24 @@
+[auto] **Goal:** Build `taskq`, a standalone SQLite-backed task queue CLI (`python3 -m taskq ...`) with claim/done/fail workflows.
+
+**Decisions (later supersede earlier):**
+- SQLite storage: zero services, atomic writes, survives reboot.
+- Claim lease is 60 s (`LEASE_SECONDS`).
+- Priority is an integer 0-9, 0 is MOST urgent (nice convention), default 5. Claim order is priority ascending, then id/creation. "Higher = more urgent" was rejected.
+- `claim` uses a single transaction opened with `BEGIN IMMEDIATE`, not a lock file. Root cause of the old duplicate hand-out: the SELECT ran outside any transaction, since Python sqlite3 only opens implicit transactions before DML.
+- Retries: max 3 attempts, backoff 2s/4s/8s, NO jitter (keeps tests deterministic; few workers). The third failure sets status `dead`. `not_before` and `attempts` columns are auto-migrated.
+- Refactor (supersedes the old `storage.py`): all SQL lives in `Repository`. The default DB is `~/.taskq/queue.db`, overridable with `TASKQ_DB`, because running from different folders created several databases. The old DB is not migrated.
+- JSON output: every document has top-level `"v": 1` (`SCHEMA_VERSION`). Output is always an object, never a bare array. `claim --json` on an empty queue prints `{"v":1,"task":null}` and exits 1.
+- Dead-letter: only listing (`dead`) is implemented. Purge and requeue are deliberately NOT built.
+
+**Current state:** 25 tests pass. Latest commit is `201960d`. `list` prints `id<TAB>priority<TAB>payload`.
+
+**Files:**
+- `taskq/repository.py`: `Repository`, with `claim`, `enqueue`, `fail`, `list_tasks`, `list_dead`, and the test hook `_after_select_hook`.
+- `taskq/cli.py`
+- `taskq/__main__.py`
+- `tests/test_cli.py`
+- `tests/test_repository.py`
+
+**Open issues:**
+- The dead-task purge policy (keep forever vs. expire after N days) is undecided and has no owner. A `TODO(open question)` sits above `list_dead` in `taskq/repository.py`. Do not add purge or requeue until it is decided.
+- `dead` has no `--json` flag. Ask whether to add one.

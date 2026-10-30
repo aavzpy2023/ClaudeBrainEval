@@ -1,0 +1,24 @@
+[auto] Goal: build and maintain notes-api, a TypeScript HTTP notes service. Node 26 runs .ts natively, with .ts import extensions, erasable syntax only, no third-party packages, and node:test. `node --test` must stay green (28 tests now).
+
+Decisions and why:
+- `createdAt` is stored as epoch ms UTC and returned as ISO-8601. Local minute-resolution strings made ordering ambiguous. `list()` sorts on the number, with insertion order only as the tie-break.
+- Validation returns 422 for invalid content, because the JSON is well-formed. Malformed JSON stays 400, with the old `{error:'Invalid JSON'}` shape. Title is required (1–120 chars). Body is optional (max 10000, defaults to `''`).
+- PATCH root cause: `Object.assign` of the raw body overwrote `id` and `createdAt`. This supersedes the earlier "simple Object.assign merge". PATCH is now strict: only `title` and `body` are accepted. Other fields, an empty patch or invalid values return 422. Silent drops were rejected because they hide client bugs. `store.patch` copies only those two fields.
+- Persistence: if `NOTES_FILE` is set, the store loads it at startup and rewrites the whole file on every change. It writes a temp file `<file>.<pid>.tmp`, then renames it over the target, so a crash can't leave a half-written file.
+
+Current state: the latest commit is 7affb30. Earlier commits are e87be6a, 66fd7b7, 45b6172 and 26cc749.
+
+Files:
+- `src/store.ts`: `createStore(now?, file?)`
+- `src/server.ts`
+- `src/validation.ts`: `validateNoteInput`, `validateNotePatch`
+- `src/main.ts`
+- `test/notes.test.ts`
+- `test/store.test.ts`
+- `test/persistence.test.ts`
+
+Open issues:
+- Multi-process safety (file lock vs. SQLite) is unresolved and nobody owns it. There is a TODO in `src/store.ts`.
+- A corrupt `NOTES_FILE` makes startup fail with the JSON parse error.
+- A crash mid-write is untested.
+- Lengths count UTF-16 code units.

@@ -38,6 +38,7 @@ def freeze(project: str, proj: Path, db: Path) -> None:
     dst = sqlite3.connect(snap / "brain.db")
     with dst:
         src.backup(dst)
+    dst.execute("PRAGMA journal_mode=DELETE")  # single file, no -wal/-shm to ship
     src.close()
     dst.close()
 

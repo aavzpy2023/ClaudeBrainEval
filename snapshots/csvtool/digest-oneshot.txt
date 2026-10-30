@@ -1,0 +1,24 @@
+[auto] Goal: Go CLI `csvtool` (module `csvtool`, stdlib only, tests in `_test.go`, `go test ./...` must pass) for reading CSVs. Subcommands: `head`, `select`, `filter`, `stats`.
+
+Decisions and why:
+- Parsing is strict by default. `--lazy-quotes` (flag helper `lazyFlag`) is opt-in. It was added because bare quotes caused `csv.ErrBareQuote`. `Head`, `Select`, `Filter` and `Stats` take `(…, delim rune, lazy bool)`.
+- `stats -c <col> <file>` implements only `count` (data rows, empty cells included) and `sum` (empty cells add nothing; a non-numeric cell is an error naming the row).
+- `mean` is deliberately NOT implemented. The empty-cell policy (skip vs. zero) is undecided and unowned, and a TODO in the `Stats` doc comment marks it. If the policy is "skip", `count` may need to change.
+- `head --format json` emits JSON Lines. This is temporary; JSON Lines vs. a single array is undecided, with a TODO on `HeadJSON`. Other subcommands reject `--format json` with exit 2 (`ErrUsage`, `formatFlag`). Short rows give `null`; over-long rows are an error. These were the assistant's own choices, not specified by the user.
+
+Current state: All work is committed (`aea8ddc` lazy-quotes, `03b4ff1` stats, then the JSON commit). Tests pass (`go vet` and `go test ./...`).
+
+Files (under /tmp/claude-brain-eval/history-csvtool/csvtool/):
+- `main.go` (CLI, `formatFlag`, `lazyFlag`, `runStats`)
+- `csvtool.go` (`Head`, `HeadJSON`, `ErrUsage`)
+- `stats.go`
+- `csvtool_test.go`
+- `stats_test.go`
+- `json_test.go`
+
+Open issues:
+- Empty-cell policy and `mean`.
+- Final JSON format.
+- `gofmt -l` was never run because the sandbox blocked it, so formatting is unchecked.
+- The CLI hasn't been run end to end, except for the exit-code tests in `json_test.go`.
+- The JSON commit's success is only implied, because the commit output was empty.

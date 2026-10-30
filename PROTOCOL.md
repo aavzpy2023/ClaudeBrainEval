@@ -137,6 +137,13 @@ Isolation lessons learned in P1 (kept as methodological notes):
 - A scripted bug must exist in the code before its fix is requested; a model that cannot reproduce a
   bug rightly refuses to commit a fix (attempt 1).
 
+Digest chain: each history ships three digests built incrementally (after sessions 3, 6 and 8) by
+`chain.py`, each from the previous digest plus only the activity since, as in real use. The one-shot
+digest produced earlier is kept as `snapshots/<project>/digest-oneshot.txt` for comparison. The final
+digest of the chain is what the briefing injects. Observed drift (kept, not edited): in csvtool the
+open question about delimiter auto-detection is listed in digest 2, reduced to a "no auto-detection"
+decision line in digest 3, and absent from the one-shot digest.
+
 Snapshot provenance: the synthetic projects are published as `snapshots/<project>/repo.bundle`
 (branch `main`) next to the frozen `brain.db`. Their commits were generated with the agent's default
 trailers and a placeholder author; before publishing they were rewritten to carry the repository
