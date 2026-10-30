@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -31,7 +32,14 @@ def freeze(project: str, proj: Path, db: Path) -> None:
         subprocess.run(["git", "clone", "-q", str(proj), str(keep)], check=True)
     snap = ROOT / "snapshots" / project
     snap.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(db, snap / "brain.db")
+    # The brain database is in WAL mode: a plain file copy misses what is still in the -wal file.
+    (snap / "brain.db").unlink(missing_ok=True)
+    src = sqlite3.connect(db)
+    dst = sqlite3.connect(snap / "brain.db")
+    with dst:
+        src.backup(dst)
+    src.close()
+    dst.close()
 
 
 def main() -> None:
