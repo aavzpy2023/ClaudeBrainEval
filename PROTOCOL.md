@@ -12,6 +12,7 @@ before Phase 4 starts. After that tag, changes go in an "Amendments" section, ne
 | RQ3 | Which component carries the effect? | H3: the digest explains most of the reduction; the session list alone does not. |
 | RQ4 | When does it hurt? | H4: on history-independent tasks (C) it adds a small fixed cost; on stale-memory tasks (D) quality drops. |
 | RQ5 | Does the effect depend on model size? | H5: the relative input-cost reduction is larger for Haiku than for Opus (condition x model interaction). |
+| RQ6 | When does the digest pay for its fixed cost, and when is retrieval needed? | H6: on E1 (answer in the history but not in the digest) C4 beats C3, and C3 is no better than C0; on E2 (task touches code the digest does not mention) the digest only adds cost. |
 
 ## 2. System under test
 
@@ -64,11 +65,16 @@ questions) are listed in `history/<project>.json`, one entry per scripted sessio
 
 ## 5. Tasks
 
-Categories (8-10 tasks per category overall, spread evenly over the three projects):
+Categories (8-10 tasks per category overall; 5 categories, about 40-45 tasks, spread evenly over the three projects):
 - **A** history recall ("what was decided about X and why?")
 - **B** work continuation, verifiable by tests
 - **C** history-independent tasks solvable from the code alone
 - **D** adversarial: a commit made after the snapshot contradicts the digest (stale memory)
+- **E** project-related but outside what the digest covers, in two subtypes:
+  **E1** the answer exists in the archived history but the digest omits it (for example the
+  delimiter auto-detection question left open in `csvtool`); **E2** the task touches code the digest
+  never mentions, so the briefing is irrelevant to it. Each E1 task is built from a fact verified
+  present in the transcripts and verified absent from the frozen digest.
 
 Every task has a reference answer or an automated oracle written BEFORE any measurement.
 
@@ -77,7 +83,7 @@ Every task has a reference answer or an automated oracle written BEFORE any meas
 - Run unit: `(task, condition, rep, model, effort)`. Order randomized, seed in `bench/matrix.json`.
 - Subject models, all at low effort (same instruction, though "low" is not equivalent across
   models; declared in section 8): Haiku and Sonnet run the full design (5 reps). Opus runs a
-  pre-fixed subset (12 tasks, 3 per category), conditions C0/C3/C5 only, 3 reps (108 runs).
+  pre-fixed subset (15 tasks, 3 per category), conditions C0/C3/C5 only, 3 reps (135 runs).
   The Opus subset size is subject to the pilot: it is adjusted to the runs that fit the
   subscription quota, and frozen with `prereg-v1`. Cross-model comparisons use only tasks and
   conditions shared by the models compared. Primary model-dependence test: the
@@ -88,9 +94,21 @@ Every task has a reference answer or an automated oracle written BEFORE any meas
   Cold-cache and warm-cache reported separately.
 - Quality: 0-2 rubric (A, D) by two blind judges; test pass rate (B, C).
 - Joint: cost per correct answer.
+- Retrieval behaviour (C4): whether the model searched the archive, how often, and whether it did so
+  when the task needed it (E1) versus when it did not (A, C, E2). Read from the transcript's tool calls.
 - Stats: mixed model `metric ~ condition + category + (1|task)`, bootstrap CIs, effect sizes,
   Holm correction for pairwise comparisons against C0 and C5. Negative results reported.
 - A run that hits the subscription quota is logged `status=quota` and retried; it is never data.
+
+## 6.1 Exploratory goal: adaptive activation (not part of the pre-registered tests)
+
+The digest costs a fixed number of tokens on every session start, and the results are expected to be
+task-dependent (RQ4, RQ6). A practical consequence the data can inform: switching the briefing on or
+off automatically. After the confirmatory analysis, per-task outcomes by condition are used to fit
+simple, transparent decision rules (for example, from the task's wording, whether it names files or
+decisions, and how long since the last digest) and to estimate the net token cost of each rule
+against always-on and always-off, with cross-validation across projects. Reported as exploratory;
+the rule is evaluated on held-out tasks and, ideally, on a project not used to derive it.
 
 ## 7. Evidence (per run, `runs/raw/<run_id>/`)
 
