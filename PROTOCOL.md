@@ -38,6 +38,30 @@ naturally. Each session ends in a commit. The resulting repo + brain database ar
 snapshot; every run starts from a fresh copy of it, in an isolated config dir and brain data dir,
 in a working directory OUTSIDE the user's home tree (see section 8, leak of global instructions).
 
+### 4.1 What the subject projects are
+
+All three are small programs written for this study; none is a real product. They exist to give the
+memory system a realistic, fully controlled work history to recall. Each history is 8 scripted
+sessions, each ending in a commit with passing tests. Sizes at the final commit (lines, tests
+excluded / tests):
+
+| Project | What it is | Stack | Source / tests | History profile |
+|---|---|---|---|---|
+| `taskq` | Persistent task queue with a CLI: enqueue, claim with a lease, mark done or failed, retry with backoff, dead-letter listing. SQLite storage. | Python 3, `unittest` | 284 / 247 | Design decisions and refactors, plus one concurrency bug (a claim race) |
+| `notes-api` | REST API for notes over plain HTTP: CRUD, validation, ordering, partial update, file persistence. | TypeScript on Node 26, `node:test` | 263 / 290 | Two bugs with root causes (minute-resolution timestamps, mass assignment in PATCH) |
+| `csvtool` | Command-line CSV utility: `head`, `select`, `filter`, `stats`, delimiter and quote options, JSON output. | Go, `go test` | 536 / 509 | Unfinished work and open decisions (delimiter auto-detection, empty-cell policy, final JSON format) |
+
+Why synthetic: a real project's history is uncontrolled, may contain private data, and cannot be
+shared. A scripted history lets every decision, bug and open question be known beforehand, so task
+oracles and reference answers are written before any measurement, and the whole study can be
+published and replicated. Why these three: they cover three ecosystems and three history profiles,
+need no third-party dependencies (no install noise in token counts), and are small enough that a
+run is cheap while still producing non-trivial history. Limitation: histories are LLM-executed from
+author-written scripts, so they are more uniform than human ones (section 8).
+
+Per-project facts that tasks are built on (decisions with rationale, bugs with root cause, open
+questions) are listed in `history/<project>.json`, one entry per scripted session.
+
 ## 5. Tasks
 
 Categories (8-10 tasks per category overall, spread evenly over the three projects):
