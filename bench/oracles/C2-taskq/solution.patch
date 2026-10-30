@@ -1,0 +1,21 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..6af037e 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -37,6 +37,7 @@ def main(argv=None):
+     fail = sub.add_parser("fail", help="record a failure and retry with backoff")
+     fail.add_argument("id", type=int)
+     sub.add_parser("dead", help="list dead tasks")
++    sub.add_parser("count", help="print how many tasks exist")
+     args = parser.parse_args(argv)
+ 
+     repo = Repository()
+@@ -62,6 +63,8 @@ def main(argv=None):
+             print(f"no such task: {args.id}", file=sys.stderr)
+             return 1
+         print(status)
++    elif args.command == "count":
++        print(len(repo.list_tasks()))
+     elif args.command == "dead":
+         for task_id, payload in repo.list_dead():
+             print(f"{task_id}\t{payload}")

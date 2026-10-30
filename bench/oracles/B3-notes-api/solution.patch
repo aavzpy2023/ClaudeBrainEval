@@ -1,0 +1,31 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..8110549 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -1,5 +1,6 @@
+ import { randomUUID } from 'node:crypto';
+-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
++import { existsSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
++import { basename, dirname } from 'node:path';
+ 
+ export type Note = {
+   id: string;
+@@ -36,9 +37,18 @@ function save(file: string, notes: Map<string, StoredNote>): void {
+   renameSync(tmp, file);
+ }
+ 
++// A crash between writing the temp file and renaming it leaves <file>.<pid>.tmp behind.
++function removeStaleTempFiles(file: string): void {
++  const prefix = `${basename(file)}.`;
++  for (const name of readdirSync(dirname(file))) {
++    if (name.startsWith(prefix) && name.endsWith('.tmp')) unlinkSync(`${dirname(file)}/${name}`);
++  }
++}
++
+ export function createStore(now: () => Date = () => new Date(), file?: string): NoteStore {
+   // createdAt is kept as epoch milliseconds (UTC) and only formatted as ISO-8601 on the way out.
+   // Map order is insertion order, which the file preserves (array order).
++  if (file) removeStaleTempFiles(file);
+   const notes = new Map<string, StoredNote>(file ? load(file).map((n) => [n.id, n]) : []);
+   const persist = () => {
+     if (file) save(file, notes);

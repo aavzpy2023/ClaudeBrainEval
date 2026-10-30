@@ -1,0 +1,28 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..2d89bdf 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -36,7 +36,8 @@ def main(argv=None):
+     done.add_argument("id", type=int)
+     fail = sub.add_parser("fail", help="record a failure and retry with backoff")
+     fail.add_argument("id", type=int)
+-    sub.add_parser("dead", help="list dead tasks")
++    dead = sub.add_parser("dead", help="list dead tasks")
++    dead.add_argument("--json", action="store_true", help="print JSON")
+     args = parser.parse_args(argv)
+ 
+     repo = Repository()
+@@ -63,8 +64,11 @@ def main(argv=None):
+             return 1
+         print(status)
+     elif args.command == "dead":
+-        for task_id, payload in repo.list_dead():
+-            print(f"{task_id}\t{payload}")
++        if args.json:
++            _print_json({"tasks": [{"id": i, "text": t} for i, t in repo.list_dead()]})
++        else:
++            for task_id, payload in repo.list_dead():
++                print(f"{task_id}\t{payload}")
+     elif args.json:
+         _print_json(
+             {

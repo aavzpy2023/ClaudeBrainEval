@@ -78,6 +78,18 @@ Categories (8-10 tasks per category overall; 5 categories, about 40-45 tasks, sp
 
 Every task has a reference answer or an automated oracle written BEFORE any measurement.
 
+### 5.1 Task bank layout
+
+`bench/tasks/<project>.json` holds one entry per task: `id`, `project`, `category` (and `subtype` E1/E2),
+`base` (`main`, or `drift` for category D), `prompt`, `pilot` and `opus` subset flags, and either
+`reference.facts` (question tasks, scored 0-2 against the listed facts) or `oracle` (code tasks: hidden
+test files copied in after the run, the command that runs them, and the reference `solution.patch`
+under `bench/oracles/<task id>/`). Category D tasks run on the `drift` branch of each subject project:
+three commits made after the frozen digests that change a constant the digest states (shipped in the
+same bundle as `main`). E1 entries carry an `evidence` note saying where the fact lives in the archive
+and what the final digest lacks. Counts: 45 tasks, 10 flagged for the pilot (2 per category), 15 for the
+Opus subset (3 per category). Planned runs: pilot 360, main phase 2835.
+
 ## 6. Runs, metrics, analysis
 
 - Run unit: `(task, condition, rep, model, effort)`. Order randomized, seed in `bench/matrix.json`.
@@ -154,7 +166,7 @@ and archived transcripts are raw evidence and still cite the original hashes; us
 
 - [ ] **P0** Repo, protocol, task checklist, runner skeleton. Exit: `status.py` and `run.py --dry-run` work.
 - [ ] **P1** (histories for taskq, notes-api and csvtool done, leak-checked and frozen; only the final review of the digests is pending) Three projects + history scripts + frozen snapshots. Exit: tests pass at every history commit; digests reviewed by hand.
-- [ ] **P2** Task bank with oracles/rubrics. Exit: every B/C oracle passes on the reference solution and fails on the base commit.
+- [x] **P2** Task bank with oracles/rubrics (45 tasks, 15 per project, 9 per category; `bench/tasks/<project>.json`). Exit met: `verify_oracles.py` shows every B/C oracle failing on the base commit, passing with the reference solution, and the full suite staying green.
 - [ ] **P3** Pilot (about 10 tasks x 6 conditions x 3 reps, Haiku and Sonnet; a few Opus runs to measure quota use). Exit: measured size per run, variance estimate, power check, runs of Opus per quota window, protocol fixes.
 - [ ] **P4** Pre-register (`prereg-v1` tag), then main experiment in resumable batches.
 - [ ] **P5** Judging.

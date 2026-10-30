@@ -1,0 +1,17 @@
+diff --git a/src/server.ts b/src/server.ts
+index 3a71474..1e8a7d2 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -43,6 +43,12 @@ export function createServer(store: NoteStore = createStore()): Server {
+   return createHttpServer(async (req, res) => {
+     const { pathname } = new URL(req.url ?? '/', 'http://localhost');
+ 
++    if (pathname === '/health') {
++      if (req.method === 'GET') return sendJson(res, 200, { ok: true });
++      res.setHeader('allow', 'GET');
++      return sendJson(res, 405, { error: 'Method not allowed' });
++    }
++
+     if (pathname === '/notes') {
+       if (req.method === 'GET') {
+         return sendJson(res, 200, store.list());

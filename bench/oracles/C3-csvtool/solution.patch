@@ -1,0 +1,26 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..c93bfe7 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -18,9 +18,9 @@ type Condition struct {
+ }
+ 
+ // ParseCondition parses expr of the form <column><op><value>, where op is one
+-// of =, !=, >, <, >=, <=.
++// of =, !=, >, <, >=, <= or ~ (the field contains the value, always as text).
+ func ParseCondition(expr string) (Condition, error) {
+-	i := strings.IndexAny(expr, "=!<>")
++	i := strings.IndexAny(expr, "=!<>~")
+ 	if i <= 0 {
+ 		return Condition{}, fmt.Errorf("invalid condition %q", expr)
+ 	}
+@@ -38,6 +38,9 @@ func ParseCondition(expr string) (Condition, error) {
+ // match reports whether field satisfies c. If both sides parse as numbers the
+ // comparison is numeric, otherwise it is a string comparison.
+ func (c Condition) match(field string) bool {
++	if c.Op == "~" {
++		return strings.Contains(field, c.Val)
++	}
+ 	var cmp int
+ 	a, errA := strconv.ParseFloat(field, 64)
+ 	b, errB := strconv.ParseFloat(c.Val, 64)

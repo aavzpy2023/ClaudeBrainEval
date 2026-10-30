@@ -1,0 +1,306 @@
+[
+  {
+    "id": "A1-taskq",
+    "project": "taskq",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "In taskq, two workers could be handed the same task. How was that fixed, why did it happen, and what alternative was rejected?",
+    "reference": {
+      "facts": [
+        "The fix is a single BEGIN IMMEDIATE transaction in Repository.claim()",
+        "Cause: the SELECT ran outside any transaction, so two workers could read the same pending row before either UPDATE took the write lock",
+        "A lock file was considered and rejected"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": true,
+    "opus": true
+  },
+  {
+    "id": "A2-taskq",
+    "project": "taskq",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Why does taskq's retry backoff have no random jitter, and how many attempts does a task get before it is dead?",
+    "reference": {
+      "facts": [
+        "No jitter because it makes tests non-deterministic and there are only a handful of workers",
+        "A task fails at most 3 times in total (MAX_ATTEMPTS = 3)",
+        "The third failure sets status dead"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "A3-taskq",
+    "project": "taskq",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Where does taskq keep its database by default, why was that location chosen, and how can I override it?",
+    "reference": {
+      "facts": [
+        "Default is ~/.taskq/queue.db",
+        "Chosen because the old default ./tasks.db created a separate queue in every folder the CLI ran from",
+        "Override with the TASKQ_DB environment variable"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "B1-taskq",
+    "project": "taskq",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "The open items for taskq include that `taskq dead` has no JSON output. Add `--json` to the `dead` command, following the JSON conventions the project already uses for `list` and `claim`.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/B1-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/B1-taskq/solution.patch"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "B2-taskq",
+    "project": "taskq",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "The team has now decided that dead tasks can be put back in the queue by hand (purging them is still undecided, leave that alone). Add a `requeue <id>` command that makes a dead task pending again with a fresh attempt budget, and fails with exit code 1 and a message on stderr if the task is unknown or not dead.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/B2-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/B2-taskq/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "B3-taskq",
+    "project": "taskq",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Known problem: a late `done` after the lease expired still marks the task done. Make `done` succeed only for a task that is currently `running`. For anything else (pending, done, dead or unknown) `Repository.done` returns False and the CLI prints `not running: <id>` to stderr and exits with 1. Keep the existing tests passing, updating one only if its intent really changed.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/B3-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/B3-taskq/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "C1-taskq",
+    "project": "taskq",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `--limit N` option to `taskq list`, working with and without `--json`. It must show at most N tasks in insertion order, and a value below 1 is a usage error (exit status 2).",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/C1-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/C1-taskq/solution.patch"
+    },
+    "pilot": true,
+    "opus": true
+  },
+  {
+    "id": "C2-taskq",
+    "project": "taskq",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `taskq count` command that prints the total number of tasks, whatever their status, as a single number on its own line.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/C2-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/C2-taskq/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "C3-taskq",
+    "project": "taskq",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Make `taskq add` reject blank text (empty or only whitespace). It must exit with status 2 and print an error on stderr, like other usage errors, and must not enqueue anything.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/C3-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/C3-taskq/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "D1-taskq",
+    "project": "taskq",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "If I run `taskq add \"x\"` without `--priority`, what priority does the task get?",
+    "reference": {
+      "facts": [
+        "The default priority is 3, not 5 (it was lowered from 5 to 3)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": true,
+    "opus": true
+  },
+  {
+    "id": "D2-taskq",
+    "project": "taskq",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "After a worker claims a task, how many seconds until another worker can claim it again if the first one never finishes?",
+    "reference": {
+      "facts": [
+        "120 seconds (the lease was doubled from 60)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "D3-taskq",
+    "project": "taskq",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "How many times can a task fail before taskq marks it dead?",
+    "reference": {
+      "facts": [
+        "5 attempts (MAX_ATTEMPTS = 5); the fifth failure makes it dead"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E1a-taskq",
+    "project": "taskq",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "With taskq's current retry settings, does a task ever wait 8 seconds before being retried? Explain.",
+    "reference": {
+      "facts": [
+        "No: with MAX_ATTEMPTS = 3 only the 2 s and 4 s delays occur",
+        "The third failure makes the task dead, so the 8 s step is never reached (the formula supports it, and a test raises MAX_ATTEMPTS to exercise it)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E1",
+    "evidence": {
+      "in_transcript": "session 5 final answer: the 8s delay cannot be reached with MAX_ATTEMPTS=3",
+      "digest_gap": "final digest lists backoff (2s, 4s, 8s) and max 3 attempts without saying 8s is unreachable",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "E1b-taskq",
+    "project": "taskq",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "What columns did `taskq list` print before priorities were added, and what does it print now?",
+    "reference": {
+      "facts": [
+        "Before: id and payload, tab-separated (two columns)",
+        "Now: id, priority and payload, tab-separated (three columns)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E1",
+    "evidence": {
+      "in_transcript": "session 3 final answer describes the list output change",
+      "digest_gap": "final digest only says the list plain format changed earlier",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E2-taskq",
+    "project": "taskq",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "How does taskq cope with a database file created by an older version that lacks newer columns?",
+    "reference": {
+      "facts": [
+        "Repository._connect() inspects the table with PRAGMA table_info",
+        "It adds each missing column with ALTER TABLE ADD COLUMN: status, lease_expires, priority, attempts, not_before",
+        "The new columns get defaults (status pending, priority default), so old rows keep working"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E2",
+    "evidence": {
+      "code": "taskq/repository.py::_connect",
+      "digest_gap": "no schema migration mentioned",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": true,
+    "opus": false
+  }
+]

@@ -1,0 +1,13 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..d8bcd8a 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -38,6 +38,8 @@ def main(argv=None):
+     fail.add_argument("id", type=int)
+     sub.add_parser("dead", help="list dead tasks")
+     args = parser.parse_args(argv)
++    if args.command == "add" and not args.text.strip():
++        parser.error("task text must not be blank")
+ 
+     repo = Repository()
+     if args.command == "add":

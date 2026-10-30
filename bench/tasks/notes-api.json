@@ -1,0 +1,301 @@
+[
+  {
+    "id": "A1-notes-api",
+    "project": "notes-api",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Why does notes-api answer 422 for an invalid note, and in which case does it still answer 400?",
+    "reference": {
+      "facts": [
+        "422 because the JSON is well-formed and the problem is its content",
+        "400 is kept for malformed JSON, with the body {error: 'Invalid JSON'}"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "A2-notes-api",
+    "project": "notes-api",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "PATCH on a note once let clients overwrite the note's id and creation date. What was the root cause and how was it fixed?",
+    "reference": {
+      "facts": [
+        "Root cause: the raw request body was merged onto the stored note with Object.assign, so id and createdAt could be overwritten",
+        "Fix: PATCH accepts only title and body, any other field makes the request fail with 422 (strict), and store.patch copies only those two fields",
+        "Silently ignoring unknown fields was rejected because it hides client bugs"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": true,
+    "opus": false
+  },
+  {
+    "id": "A3-notes-api",
+    "project": "notes-api",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Why does DELETE /notes/:id answer 204 even when the note does not exist?",
+    "reference": {
+      "facts": [
+        "DELETE is idempotent by decision",
+        "So that retrying clients never see an error",
+        "A 404 on a repeated delete was rejected"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "B1-notes-api",
+    "project": "notes-api",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "One of the known open problems: a corrupt NOTES_FILE makes the server crash at startup with a JSON parse error. Make createStore recover instead: if the file cannot be parsed, it must not throw, it moves the unreadable file aside to `<file>.corrupt` and starts with an empty store.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/B1-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/B1-notes-api/solution.patch"
+    },
+    "pilot": true,
+    "opus": true
+  },
+  {
+    "id": "B2-notes-api",
+    "project": "notes-api",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Decision taken: length limits for title and body must count Unicode code points, not UTF-16 code units, so an emoji counts as one character. Apply this to note creation, replacement and PATCH validation, keeping the limits themselves unchanged.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/B2-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/B2-notes-api/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "B3-notes-api",
+    "project": "notes-api",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Crash safety follow-up for the persistence layer: if the process died between writing the temp file and renaming it, `<file>.<pid>.tmp` is left behind. When a store is created with a file, remove any leftover temp files of that file (names `<file>.<something>.tmp`) at startup, without touching the real data file or unrelated files.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/B3-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/B3-notes-api/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "C1-notes-api",
+    "project": "notes-api",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `GET /health` endpoint that answers 200 with `{\"ok\": true}`. Other methods on that path must answer 405.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/C1-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/C1-notes-api/solution.patch"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "C2-notes-api",
+    "project": "notes-api",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `q` query parameter to `GET /notes`: when present, return only notes whose title or body contains the text, case-insensitively, keeping the newest-first order. Without `q`, behaviour is unchanged.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/C2-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/C2-notes-api/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "C3-notes-api",
+    "project": "notes-api",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `limit` query parameter to `GET /notes` that returns at most that many notes, newest first. It must be an integer from 1 to 100; anything else answers 422 with the same error shape the API already uses for invalid content. Without `limit`, behaviour is unchanged.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/C3-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/C3-notes-api/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "D1-notes-api",
+    "project": "notes-api",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "What is the maximum length accepted for a note title?",
+    "reference": {
+      "facts": [
+        "200 characters (raised from 120)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "D2-notes-api",
+    "project": "notes-api",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "What does DELETE /notes/:id answer when the note does not exist?",
+    "reference": {
+      "facts": [
+        "404 (it is no longer idempotent; 204 only when a note was actually deleted)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": true,
+    "opus": false
+  },
+  {
+    "id": "D3-notes-api",
+    "project": "notes-api",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "Which error code string does the API return in the body when a note fails validation?",
+    "reference": {
+      "facts": [
+        "invalid_note (renamed from validation_failed)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E1a-notes-api",
+    "project": "notes-api",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Notes used a different format for createdAt in the first iterations. What was it and why was it replaced?",
+    "reference": {
+      "facts": [
+        "It was a local-time string in the form YYYY-MM-DD HH:mm",
+        "Minute resolution made notes created in the same minute compare equal, so ordering inside a minute relied on insertion order; local time is also ambiguous across timezones and DST",
+        "It was replaced by epoch milliseconds (UTC) returned as ISO-8601"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E1",
+    "evidence": {
+      "in_transcript": "session 3 (format) and session 4 (root cause) final answers",
+      "digest_gap": "final digest states only the current epoch-ms format",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "E1b-notes-api",
+    "project": "notes-api",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "If POST /notes omits the body field, what happens, and did it always behave that way?",
+    "reference": {
+      "facts": [
+        "Today the note is created and body defaults to the empty string",
+        "Earlier (before the validation work) a missing body was rejected with 400",
+        "The change came with the validation commit (422 rules, body optional)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E1",
+    "evidence": {
+      "in_transcript": "session 5 final answer: behaviour change, a missing body used to be rejected",
+      "digest_gap": "final digest says body is optional with default '' but not that this changed",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E2-notes-api",
+    "project": "notes-api",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "What does the server answer for unsupported HTTP methods and for unknown paths?",
+    "reference": {
+      "facts": [
+        "Unsupported method on /notes: 405 with an Allow header 'GET, POST'",
+        "Unsupported method on /notes/:id: 405 with Allow 'GET, PUT, PATCH, DELETE'",
+        "Unknown paths: 404 with {error: 'Not found'}"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E2",
+    "evidence": {
+      "code": "src/server.ts",
+      "digest_gap": "routing details beyond the main verbs are not in the digest",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": false
+  }
+]

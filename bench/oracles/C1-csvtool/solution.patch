@@ -1,0 +1,83 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..63c4c3b 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -152,6 +152,30 @@ func Head(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 	return cw.Error()
+ }
+ 
++// Count writes the number of data rows (everything after the header) to w.
++func Count(r io.Reader, w io.Writer, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	cr.ReuseRecord = true
++	n := 0
++	for first := true; ; first = false {
++		_, err := cr.Read()
++		if err == io.EOF {
++			break
++		}
++		if err != nil {
++			return err
++		}
++		if !first {
++			n++
++		}
++	}
++	_, err := fmt.Fprintln(w, n)
++	return err
++}
++
+ // ErrUsage marks a bad command-line combination; the CLI exits 2 for it.
+ var ErrUsage = errors.New("usage")
+ 
+diff --git a/main.go b/main.go
+index 3c02ac8..ffd57da 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool count <file>\n       csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,6 +128,18 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "count":
++		fs := flag.NewFlagSet("count", flag.ExitOnError)
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		fs.Parse(os.Args[2:])
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runCount(fs.Arg(0), d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+@@ -154,6 +166,15 @@ func open(path string) (io.ReadCloser, error) {
+ 	return os.Open(path)
+ }
+ 
++func runCount(path string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Count(f, os.Stdout, delim, lazy)
++}
++
+ func runHead(path string, n int, delim rune, lazy, asJSON bool) error {
+ 	f, err := open(path)
+ 	if err != nil {

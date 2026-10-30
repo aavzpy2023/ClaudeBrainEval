@@ -1,0 +1,26 @@
+diff --git a/src/server.ts b/src/server.ts
+index 3a71474..a727870 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -41,11 +41,19 @@ async function readNoteInput(
+ 
+ export function createServer(store: NoteStore = createStore()): Server {
+   return createHttpServer(async (req, res) => {
+-    const { pathname } = new URL(req.url ?? '/', 'http://localhost');
++    const { pathname, searchParams } = new URL(req.url ?? '/', 'http://localhost');
+ 
+     if (pathname === '/notes') {
+       if (req.method === 'GET') {
+-        return sendJson(res, 200, store.list());
++        const rawLimit = searchParams.get('limit');
++        if (rawLimit === null) return sendJson(res, 200, store.list());
++        const limit = Number(rawLimit);
++        if (!/^\d+$/.test(rawLimit) || limit < 1 || limit > 100) {
++          return sendJson(res, 422, {
++            error: { code: 'validation_failed', message: 'limit must be an integer between 1 and 100' },
++          });
++        }
++        return sendJson(res, 200, store.list().slice(0, limit));
+       }
+ 
+       if (req.method === 'POST') {

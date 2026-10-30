@@ -1,0 +1,38 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..2b563f5 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -30,6 +30,7 @@ def main(argv=None):
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
++    ls.add_argument("--limit", type=int, help="show at most N tasks")
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -38,8 +39,11 @@ def main(argv=None):
+     fail.add_argument("id", type=int)
+     sub.add_parser("dead", help="list dead tasks")
+     args = parser.parse_args(argv)
++    if args.command == "list" and args.limit is not None and args.limit < 1:
++        parser.error("--limit must be at least 1")
+ 
+     repo = Repository()
++    limit = getattr(args, "limit", None)
+     if args.command == "add":
+         print(repo.enqueue(args.text, priority=args.priority))
+     elif args.command == "claim":
+@@ -70,11 +74,11 @@ def main(argv=None):
+             {
+                 "tasks": [
+                     {"id": i, "priority": p, "text": t}
+-                    for i, p, t in repo.list_tasks()
++                    for i, p, t in repo.list_tasks()[:limit]
+                 ]
+             }
+         )
+     else:
+-        for task_id, priority, payload in repo.list_tasks():
++        for task_id, priority, payload in repo.list_tasks()[:limit]:
+             print(f"{task_id}\t{priority}\t{payload}")
+     return 0

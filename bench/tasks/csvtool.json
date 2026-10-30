@@ -1,0 +1,313 @@
+[
+  {
+    "id": "A1-csvtool",
+    "project": "csvtool",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Why does csvtool stream rows instead of loading the whole file, and which approach was rejected?",
+    "reference": {
+      "facts": [
+        "Users run it on multi-gigabyte files, so memory use must not depend on file size",
+        "Reading everything with csv.Reader.ReadAll was rejected",
+        "Head, Select and Filter write each row as they read it"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "A2-csvtool",
+    "project": "csvtool",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Why is csvtool's CSV parsing strict by default, and how do I tolerate a stray quote in a field?",
+    "reference": {
+      "facts": [
+        "Strict by default because lenient parsing silently accepts corrupted data and hides bugs in whatever produced the file",
+        "Making lenient the default was rejected",
+        "Use the --lazy-quotes flag; the strict error is csv.ErrBareQuote (bare \" in non-quoted-field)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "A3-csvtool",
+    "project": "csvtool",
+    "category": "A",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "What exit code does csvtool use when a requested column does not exist, and what does it use for other errors?",
+    "reference": {
+      "facts": [
+        "A missing column exits with 2 (ErrMissingColumn)",
+        "Other errors, such as an unreadable file, exit with 1",
+        "A usage error also exits with 2"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "B1-csvtool",
+    "project": "csvtool",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "The empty-cell policy for `stats` has now been decided: empty cells are skipped. Add a `mean` line to the `stats` output after `sum`, computed as the sum divided by the number of non-empty cells; `count` keeps counting every data row. If the column has no numeric cell, print `mean: n/a`. Keep the output format of the existing lines and update tests whose expected output changed.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/B1-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/B1-csvtool/solution.patch"
+    },
+    "pilot": true,
+    "opus": true
+  },
+  {
+    "id": "B2-csvtool",
+    "project": "csvtool",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "The final JSON format for `head --format json` has been decided: a single JSON array of objects on one line (compact, keys in column order) followed by a newline, instead of JSON Lines. No rows, or empty input, print `[]`. Short rows still give null and rows longer than the header are still an error. Update the tests whose expected output changed.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/B2-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/B2-csvtool/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "B3-csvtool",
+    "project": "csvtool",
+    "category": "B",
+    "base": "main",
+    "kind": "code",
+    "prompt": "It has been decided that csvtool may detect the delimiter, but only on request: add the value `auto` to `--delim`. With `--delim auto` the delimiter is the most frequent of comma, semicolon, tab and pipe in the first line (ignoring text inside quotes), falling back to comma, and it is used for input and output like an explicit one. Explicit delimiters must behave exactly as before. It must work for every subcommand that has `--delim`.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/B3-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/B3-csvtool/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "C1-csvtool",
+    "project": "csvtool",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `count` subcommand: `csvtool count <file>` prints the number of data rows (everything after the header) on a single line. It must accept `-` for standard input, `--delim` and `--lazy-quotes` like the other subcommands, print 0 for header-only or empty input, and exit with 1 if the file cannot be opened.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/C1-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/C1-csvtool/solution.patch"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "C2-csvtool",
+    "project": "csvtool",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `columns` subcommand: `csvtool columns <file>` prints the header's column names, one per line. It must accept `-` for standard input, `--delim` and `--lazy-quotes` like the other subcommands, and print nothing for empty input.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/C2-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/C2-csvtool/solution.patch"
+    },
+    "pilot": true,
+    "opus": false
+  },
+  {
+    "id": "C3-csvtool",
+    "project": "csvtool",
+    "category": "C",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `~` operator to the `filter` condition syntax, such as `name~an`, meaning the field contains the value. It is always a case-sensitive text comparison, even when the value looks numeric. The existing operators must keep working.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/C3-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/C3-csvtool/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "D1-csvtool",
+    "project": "csvtool",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "What exit status does csvtool return when a requested column does not exist?",
+    "reference": {
+      "facts": [
+        "3 (a dedicated status, distinct from the usage error status 2)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": true
+  },
+  {
+    "id": "D2-csvtool",
+    "project": "csvtool",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "How many data rows does `csvtool head` print when I do not pass -n?",
+    "reference": {
+      "facts": [
+        "5 (the default was lowered from 10)"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "D3-csvtool",
+    "project": "csvtool",
+    "category": "D",
+    "base": "drift",
+    "kind": "qa",
+    "prompt": "Does csvtool accept a stray quote inside an unquoted field by default? How do I get the strict behaviour?",
+    "reference": {
+      "facts": [
+        "Yes, parsing is lenient by default now",
+        "Pass --lazy-quotes=false to get strict parsing"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E1a-csvtool",
+    "project": "csvtool",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "Has it been decided whether csvtool should detect the field delimiter automatically, and who is responsible for deciding?",
+    "reference": {
+      "facts": [
+        "No: it is an open question that has not been decided",
+        "It is deliberately not implemented; --delim is always explicit and defaults to a comma",
+        "Nobody owns the decision; a TODO in delimFlag says not to add detection until someone does"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E1",
+    "evidence": {
+      "in_transcript": "session 5 final answer and the TODO in main.go",
+      "digest_gap": "final digest says only 'no auto-detection' as a decision, without saying it is open and unowned",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": true,
+    "opus": true
+  },
+  {
+    "id": "E1b-csvtool",
+    "project": "csvtool",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "What does `select` output for a cell that is missing because a row is shorter than the header, and how does that differ from `head --format json`?",
+    "reference": {
+      "facts": [
+        "select emits an empty cell for the missing field",
+        "head --format json emits null for the missing field"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E1",
+    "evidence": {
+      "in_transcript": "session 2 final answer (empty cell) and session 8 (null)",
+      "digest_gap": "final digest mentions only null for JSON",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E2-csvtool",
+    "project": "csvtool",
+    "category": "E",
+    "base": "main",
+    "kind": "qa",
+    "prompt": "What does `csvtool select` do when the input file is completely empty?",
+    "reference": {
+      "facts": [
+        "It reports a missing-column error mentioning empty input",
+        "Exit status 2, as for any missing column"
+      ],
+      "scoring": "2 = all facts, 1 = more than half, 0 = otherwise or contradicts"
+    },
+    "subtype": "E2",
+    "evidence": {
+      "code": "csvtool.go::Select (ErrMissingColumn with 'empty input')",
+      "digest_gap": "empty-input handling is not in the digest",
+      "verified": "fact found in the archived transcript and absent from the final digest (checked with a script and by reading both)"
+    },
+    "pilot": false,
+    "opus": false
+  }
+]

@@ -1,0 +1,48 @@
+diff --git a/src/validation.ts b/src/validation.ts
+index b622ad8..6369d6a 100644
+--- a/src/validation.ts
++++ b/src/validation.ts
+@@ -3,6 +3,9 @@ import type { NoteInput } from './store.ts';
+ export const MAX_TITLE_LENGTH = 120;
+ export const MAX_BODY_LENGTH = 10000;
+ 
++// Limits count Unicode code points, so an emoji is one character, not two.
++const len = (s: string) => [...s].length;
++
+ export type ValidationResult = { ok: true; value: NoteInput } | { ok: false; message: string };
+ 
+ export function validateNoteInput(input: unknown): ValidationResult {
+@@ -13,13 +16,13 @@ export function validateNoteInput(input: unknown): ValidationResult {
+   if (typeof title !== 'string' || title.length === 0) {
+     return { ok: false, message: 'title is required and must be a non-empty string' };
+   }
+-  if (title.length > MAX_TITLE_LENGTH) {
++  if (len(title) > MAX_TITLE_LENGTH) {
+     return { ok: false, message: `title must be at most ${MAX_TITLE_LENGTH} characters` };
+   }
+   if (typeof body !== 'string') {
+     return { ok: false, message: 'body must be a string' };
+   }
+-  if (body.length > MAX_BODY_LENGTH) {
++  if (len(body) > MAX_BODY_LENGTH) {
+     return { ok: false, message: `body must be at most ${MAX_BODY_LENGTH} characters` };
+   }
+   return { ok: true, value: { title, body } };
+@@ -48,7 +51,7 @@ export function validateNotePatch(input: unknown): PatchValidationResult {
+     if (typeof title !== 'string' || title.length === 0) {
+       return { ok: false, message: 'title must be a non-empty string' };
+     }
+-    if (title.length > MAX_TITLE_LENGTH) {
++    if (len(title) > MAX_TITLE_LENGTH) {
+       return { ok: false, message: `title must be at most ${MAX_TITLE_LENGTH} characters` };
+     }
+     value.title = title;
+@@ -57,7 +60,7 @@ export function validateNotePatch(input: unknown): PatchValidationResult {
+     if (typeof body !== 'string') {
+       return { ok: false, message: 'body must be a string' };
+     }
+-    if (body.length > MAX_BODY_LENGTH) {
++    if (len(body) > MAX_BODY_LENGTH) {
+       return { ok: false, message: `body must be at most ${MAX_BODY_LENGTH} characters` };
+     }
+     value.body = body;

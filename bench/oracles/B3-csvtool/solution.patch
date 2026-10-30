@@ -1,0 +1,103 @@
+diff --git a/main.go b/main.go
+index 3c02ac8..d9028e9 100644
+--- a/main.go
++++ b/main.go
+@@ -1,6 +1,8 @@
+ package main
+ 
+ import (
++	"bufio"
++	"bytes"
+ 	"errors"
+ 	"flag"
+ 	"fmt"
+@@ -21,6 +23,9 @@ const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool
+ func delimFlag(fs *flag.FlagSet) func() (rune, error) {
+ 	s := fs.String("delim", ",", "single-character field delimiter (\\t for tab)")
+ 	return func() (rune, error) {
++		if *s == "auto" {
++			return 0, nil // resolved against the input by resolveDelim
++		}
+ 		if *s == `\t` {
+ 			return '\t', nil
+ 		}
+@@ -32,6 +37,37 @@ func delimFlag(fs *flag.FlagSet) func() (rune, error) {
+ 	}
+ }
+ 
++// resolveDelim turns the "auto" sentinel (0) into a real delimiter by peeking at the first line
++// of r: the most frequent of , ; tab | outside quotes, comma when none appears. Any other d is
++// returned unchanged. The returned reader still yields every byte of r.
++func resolveDelim(r io.Reader, d rune) (io.Reader, rune) {
++	if d != 0 {
++		return r, d
++	}
++	br := bufio.NewReader(r)
++	head, _ := br.Peek(4096)
++	if i := bytes.IndexByte(head, '\n'); i >= 0 {
++		head = head[:i]
++	}
++	counts := map[rune]int{}
++	inQuotes := false
++	for _, c := range string(head) {
++		switch {
++		case c == '"':
++			inQuotes = !inQuotes
++		case !inQuotes:
++			counts[c]++
++		}
++	}
++	best, most := ',', 0
++	for _, c := range []rune{',', ';', '\t', '|'} {
++		if counts[c] > most {
++			best, most = c, counts[c]
++		}
++	}
++	return br, best
++}
++
+ // lazyFlag registers --lazy-quotes on fs. Parsing stays strict unless it is set,
+ // so a corrupted file is reported rather than silently accepted.
+ func lazyFlag(fs *flag.FlagSet) *bool {
+@@ -160,10 +196,11 @@ func runHead(path string, n int, delim rune, lazy, asJSON bool) error {
+ 		return err
+ 	}
+ 	defer f.Close()
++	r, delim := resolveDelim(f, delim)
+ 	if asJSON {
+-		return HeadJSON(f, os.Stdout, n, delim, lazy)
++		return HeadJSON(r, os.Stdout, n, delim, lazy)
+ 	}
+-	return Head(f, os.Stdout, n, delim, lazy)
++	return Head(r, os.Stdout, n, delim, lazy)
+ }
+ 
+ func runSelect(path string, cols []string, delim rune, lazy bool) error {
+@@ -172,7 +209,8 @@ func runSelect(path string, cols []string, delim rune, lazy bool) error {
+ 		return err
+ 	}
+ 	defer f.Close()
+-	return Select(f, os.Stdout, cols, delim, lazy)
++	r, delim := resolveDelim(f, delim)
++	return Select(r, os.Stdout, cols, delim, lazy)
+ }
+ 
+ func runStats(path, col string, delim rune, lazy bool) error {
+@@ -181,7 +219,8 @@ func runStats(path, col string, delim rune, lazy bool) error {
+ 		return err
+ 	}
+ 	defer f.Close()
+-	return Stats(f, os.Stdout, col, delim, lazy)
++	r, delim := resolveDelim(f, delim)
++	return Stats(r, os.Stdout, col, delim, lazy)
+ }
+ 
+ func runFilter(path string, c Condition, delim rune, lazy bool) error {
+@@ -190,5 +229,6 @@ func runFilter(path string, c Condition, delim rune, lazy bool) error {
+ 		return err
+ 	}
+ 	defer f.Close()
+-	return Filter(f, os.Stdout, c, delim, lazy)
++	r, delim := resolveDelim(f, delim)
++	return Filter(r, os.Stdout, c, delim, lazy)
+ }

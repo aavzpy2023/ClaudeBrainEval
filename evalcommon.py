@@ -14,7 +14,10 @@ COLUMNS = [
 
 
 def load_tasks() -> list[dict]:
-    return json.loads((ROOT / "bench" / "tasks.json").read_text())
+    tasks = []
+    for f in sorted((ROOT / "bench" / "tasks").glob("*.json")):
+        tasks += json.loads(f.read_text())
+    return tasks
 
 
 def load_matrix() -> dict:
