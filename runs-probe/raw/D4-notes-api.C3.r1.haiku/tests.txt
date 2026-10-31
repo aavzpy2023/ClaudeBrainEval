@@ -1,0 +1,13 @@
+▶ oracle: limits
+  ✔ GET /limits reports the current limits (35.322349ms)
+  ✔ a title of exactly titleMax characters is accepted and one more is rejected (15.252421ms)
+  ✔ other methods get 405 (3.501363ms)
+✔ oracle: limits (55.242963ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 228.838333

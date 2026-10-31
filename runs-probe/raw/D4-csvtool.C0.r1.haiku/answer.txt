@@ -1,0 +1,14 @@
+I added `csvtool distinct -c <column> <file>`. The package builds and `go vet` and `go test ./...` pass, including six new tests. I did not run the built binary end to end: the shell required approval for each run, so the CLI wiring is checked only by the build, and the behavior by the tests.
+
+**What changed**
+- **`distinct.go`** (new): `Distinct(r, w, col, delim, lazy)` follows the same shape as `Stats` and `Select`. It streams rows, keeps a set of seen values, and writes each new value on its own line, in first-appearance order.
+- **`main.go`**: a `distinct` case that takes `-c`, `--delim`, `--lazy-quotes`, and `-` for stdin, the same as the other subcommands. The usage text lists it.
+- **`distinct_test.go`** (new): covers first-appearance order, empty cells, short rows, no rows, a missing column, and `--delim`.
+
+**Choices I made**
+- **Missing column** returns `ErrMissingColumn`, so `fail` exits 3 the same way `select` does. Empty input also reports a missing column, as `select` does.
+- **Empty cells** count as a value. An empty cell prints as an empty line the first time it appears.
+- **Output is raw, not CSV-quoted.** A value containing a comma or newline is printed as-is, so the one-per-line format stays simple. Say if you want CSV quoting instead.
+- **`--format json`** is rejected for `distinct`, as it is for `select`, `filter` and `stats`.
+
+Nothing is committed. `gofmt -l` was not run because the shell refused it; the new code follows the existing style by hand.

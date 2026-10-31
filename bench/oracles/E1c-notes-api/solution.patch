@@ -1,0 +1,21 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..3fa3fc9 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -26,7 +26,15 @@ export type NoteStore = {
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  const raw = JSON.parse(readFileSync(file, 'utf8')) as Array<Omit<StoredNote, 'createdAt'> & { createdAt: number | string }>;
++  // The first iterations stored createdAt as local time, 'YYYY-MM-DD HH:mm'; keep the instant they meant.
++  return raw.map((n) => {
++    if (typeof n.createdAt !== 'string') return n as StoredNote;
++    const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(n.createdAt);
++    if (!m) throw new Error(`unrecognised createdAt: ${n.createdAt}`);
++    const [y, mo, d, h, mi] = m.slice(1).map(Number);
++    return { ...n, createdAt: new Date(y, mo - 1, d, h, mi).getTime() };
++  });
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.

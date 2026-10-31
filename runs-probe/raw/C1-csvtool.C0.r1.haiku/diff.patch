@@ -1,0 +1,158 @@
+diff --git a/count.go b/count.go
+new file mode 100644
+index 0000000..232dbbf
+--- /dev/null
++++ b/count.go
+@@ -0,0 +1,37 @@
++package main
++
++import (
++	"encoding/csv"
++	"fmt"
++	"io"
++)
++
++// Count streams the CSV in r and writes the number of data rows, every record
++// after the header, to w as a single line. Empty input has no header and counts
++// as 0 rows.
++func Count(r io.Reader, w io.Writer, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	cr.ReuseRecord = true
++	if _, err := cr.Read(); err == io.EOF {
++		_, err = fmt.Fprintln(w, 0)
++		return err
++	} else if err != nil {
++		return err
++	}
++	var count int
++	for {
++		_, err := cr.Read()
++		if err == io.EOF {
++			break
++		}
++		if err != nil {
++			return err
++		}
++		count++
++	}
++	_, err := fmt.Fprintln(w, count)
++	return err
++}
+diff --git a/count_test.go b/count_test.go
+new file mode 100644
+index 0000000..16ac8b7
+--- /dev/null
++++ b/count_test.go
+@@ -0,0 +1,58 @@
++package main
++
++import (
++	"strings"
++	"testing"
++)
++
++func countOf(in string) (string, error) {
++	var sb strings.Builder
++	err := Count(strings.NewReader(in), &sb, ',', false)
++	return sb.String(), err
++}
++
++func TestCountDataRows(t *testing.T) {
++	got, err := countOf("a,b\n1,2\n3,4\n5,6\n")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "3\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestCountHeaderOnlyAndEmpty(t *testing.T) {
++	for _, in := range []string{"a,b\n", "a,b", ""} {
++		got, err := countOf(in)
++		if err != nil {
++			t.Fatalf("input %q: %v", in, err)
++		}
++		if want := "0\n"; got != want {
++			t.Fatalf("input %q: got %q, want %q", in, got, want)
++		}
++	}
++}
++
++func TestCountDelim(t *testing.T) {
++	var sb strings.Builder
++	if err := Count(strings.NewReader("a;b\n1;2\n3;4\n"), &sb, ';', false); err != nil {
++		t.Fatal(err)
++	}
++	if want := "2\n"; sb.String() != want {
++		t.Fatalf("got %q, want %q", sb.String(), want)
++	}
++}
++
++func TestCountLazyQuotes(t *testing.T) {
++	in := "a,b\n1,x\"y\n"
++	if _, err := countOf(in); err == nil {
++		t.Fatal("want error for bare quote without lazy quotes")
++	}
++	var sb strings.Builder
++	if err := Count(strings.NewReader(in), &sb, ',', true); err != nil {
++		t.Fatal(err)
++	}
++	if want := "1\n"; sb.String() != want {
++		t.Fatalf("got %q, want %q", sb.String(), want)
++	}
++}
+diff --git a/main.go b/main.go
+index 3c02ac8..76a5166 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool count <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -112,6 +112,21 @@ func main() {
+ 		cond, err := ParseCondition(*where)
+ 		fail(err)
+ 		fail(runFilter(fs.Arg(0), cond, d, *lazy))
++	case "count":
++		fs := flag.NewFlagSet("count", flag.ExitOnError)
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		format := formatFlag(fs, false)
++		fs.Parse(os.Args[2:])
++		_, err := format()
++		fail(err)
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runCount(fs.Arg(0), d, *lazy))
+ 	case "stats":
+ 		fs := flag.NewFlagSet("stats", flag.ExitOnError)
+ 		c := fs.String("c", "", "numeric column to count and sum")
+@@ -175,6 +190,15 @@ func runSelect(path string, cols []string, delim rune, lazy bool) error {
+ 	return Select(f, os.Stdout, cols, delim, lazy)
+ }
+ 
++func runCount(path string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Count(f, os.Stdout, delim, lazy)
++}
++
+ func runStats(path, col string, delim rune, lazy bool) error {
+ 	f, err := open(path)
+ 	if err != nil {

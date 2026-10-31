@@ -1,0 +1,11 @@
+▶ oracle: search
+  ✔ filters by case-insensitive substring in title or body, newest first (51.147196ms)
+✔ oracle: search (52.638006ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 271.809594

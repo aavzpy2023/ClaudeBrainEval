@@ -1,0 +1,14 @@
+▶ oracle: lengths count Unicode code points
+  ✔ accepts a title of 120 emoji and rejects 121 (1.144491ms)
+  ✔ accepts a body of 10000 emoji and rejects 10001 (1.829371ms)
+  ✔ applies the same rule to PATCH (0.846166ms)
+  ✔ plain ASCII limits are unchanged (0.169484ms)
+✔ oracle: lengths count Unicode code points (5.45868ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.590938

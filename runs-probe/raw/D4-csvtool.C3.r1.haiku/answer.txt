@@ -1,0 +1,22 @@
+`distinct` is in place and the tests pass, but I did not run gofmt because the shell denied it.
+
+**What changed**
+- `distinct.go` (new): `Distinct` streams the file and prints each distinct value of the column, in order of first appearance, one per line. It uses the same reader setup as `Select` and `Stats`, so `--delim` and `--lazy-quotes` behave the same way. Input can be `-` for standard input.
+- `main.go`: a `distinct` case that takes `-c <column>` and rejects `--format` the same way `select` does. The usage text lists the new subcommand, and `runDistinct` is added.
+- `distinct_test.go` (new): tests for first-appearance order, an empty cell counted as a value, a short row read as empty, and a missing column.
+
+**Behaviour choices**
+- An empty cell prints as a blank line, so `dee,` in the sample gives a blank line among the values. A short row, one with fewer fields than the header, is treated the same way.
+- A missing column fails with `ErrMissingColumn`, so it exits 3, the same as `select`. I checked both on the same file.
+- Output is written with Go's CSV writer. A value that contains the delimiter or a quote is quoted, as in the other subcommands. A value with an embedded newline spans lines, so it is not strictly "one per line".
+
+**Verified**
+- `go vet ./...` is clean.
+- `go test ./...` passes, including the four new tests.
+- `go run . distinct -c city` on a sample file prints `oslo`, `rome` and a blank line, and `-c nope` exits 3 with `missing column: "nope"`.
+
+**Not verified**
+- `gofmt -l .` was denied by the shell, so formatting of the new and edited files is unchecked. I did not run `go fmt` either, since it also rewrites files.
+- I did not test `-` (standard input) or `--lazy-quotes` on `distinct` directly. They use the same code path as the other subcommands.
+
+Nothing is committed.

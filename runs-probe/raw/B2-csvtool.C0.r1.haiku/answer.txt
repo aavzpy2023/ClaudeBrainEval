@@ -1,0 +1,13 @@
+`head --format json` now prints a single JSON array on one line, followed by a newline. `go test ./...` passes.
+
+What changed in `csvtool.go`:
+- Output is `[{...},{...}]\n`, keys in column order. Short rows still get `null`, and rows longer than the header are still an error.
+- No rows, empty input, or a header-only file print `[]\n`. Previously these printed nothing.
+- The TODO saying the format was undecided is gone, since the format is now settled.
+
+Test changes:
+- `TestHeadJSON` expects the array form.
+- `TestHeadJSONEdges` expects `[]\n` for `n=0`, empty input and header-only input, and each case now gets its own buffer.
+- `TestFormatJSONCLI` expects the array form for `head --format json -n 1`.
+
+I did not run `gofmt` or `go vet`, because the sandbox asked for approval on those commands. I hand-formatted the one struct literal I changed. Nothing is committed.

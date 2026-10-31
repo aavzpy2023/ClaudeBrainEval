@@ -1,0 +1,52 @@
+diff --git a/src/server.ts b/src/server.ts
+index a2505c0..7665f13 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -2,7 +2,7 @@ import { createServer as createHttpServer } from 'node:http';
+ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+ import { createStore } from './store.ts';
+ import type { NoteInput, NoteStore } from './store.ts';
+-import { validateNoteInput, validateNotePatch } from './validation.ts';
++import { MAX_BODY_LENGTH, MAX_TITLE_LENGTH, validateNoteInput, validateNotePatch } from './validation.ts';
+ 
+ function sendJson(res: ServerResponse, status: number, payload: unknown): void {
+   const data = JSON.stringify(payload);
+@@ -43,6 +43,15 @@ export function createServer(store: NoteStore = createStore()): Server {
+   return createHttpServer(async (req, res) => {
+     const { pathname } = new URL(req.url ?? '/', 'http://localhost');
+ 
++    if (pathname === '/limits') {
++      if (req.method === 'GET') {
++        return sendJson(res, 200, { titleMax: MAX_TITLE_LENGTH, bodyMax: MAX_BODY_LENGTH });
++      }
++
++      res.setHeader('allow', 'GET');
++      return sendJson(res, 405, { error: 'Method not allowed' });
++    }
++
+     if (pathname === '/notes') {
+       if (req.method === 'GET') {
+         return sendJson(res, 200, store.list());
+diff --git a/test/notes.test.ts b/test/notes.test.ts
+index 2618887..df4a32b 100644
+--- a/test/notes.test.ts
++++ b/test/notes.test.ts
+@@ -29,6 +29,18 @@ describe('notes API', () => {
+       body,
+     });
+ 
++  it('GET /limits reports the current title and body limits', async () => {
++    const res = await fetch(`${baseUrl}/limits`);
++    assert.equal(res.status, 200);
++    assert.deepEqual(await res.json(), { titleMax: 200, bodyMax: 10000 });
++  });
++
++  it('returns 405 for non-GET methods on /limits', async () => {
++    const res = await fetch(`${baseUrl}/limits`, { method: 'POST' });
++    assert.equal(res.status, 405);
++    assert.equal(res.headers.get('allow'), 'GET');
++  });
++
+   it('GET /notes starts empty', async () => {
+     const res = await fetch(`${baseUrl}/notes`);
+     assert.equal(res.status, 200);

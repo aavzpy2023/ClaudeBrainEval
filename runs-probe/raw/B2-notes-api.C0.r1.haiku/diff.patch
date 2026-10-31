@@ -1,0 +1,68 @@
+diff --git a/src/validation.ts b/src/validation.ts
+index b622ad8..02c52ee 100644
+--- a/src/validation.ts
++++ b/src/validation.ts
+@@ -3,6 +3,11 @@ import type { NoteInput } from './store.ts';
+ export const MAX_TITLE_LENGTH = 120;
+ export const MAX_BODY_LENGTH = 10000;
+ 
++// Counts code points, so an emoji (two UTF-16 code units) is one character.
++function codePointLength(s: string): number {
++  return [...s].length;
++}
++
+ export type ValidationResult = { ok: true; value: NoteInput } | { ok: false; message: string };
+ 
+ export function validateNoteInput(input: unknown): ValidationResult {
+@@ -13,13 +18,13 @@ export function validateNoteInput(input: unknown): ValidationResult {
+   if (typeof title !== 'string' || title.length === 0) {
+     return { ok: false, message: 'title is required and must be a non-empty string' };
+   }
+-  if (title.length > MAX_TITLE_LENGTH) {
++  if (codePointLength(title) > MAX_TITLE_LENGTH) {
+     return { ok: false, message: `title must be at most ${MAX_TITLE_LENGTH} characters` };
+   }
+   if (typeof body !== 'string') {
+     return { ok: false, message: 'body must be a string' };
+   }
+-  if (body.length > MAX_BODY_LENGTH) {
++  if (codePointLength(body) > MAX_BODY_LENGTH) {
+     return { ok: false, message: `body must be at most ${MAX_BODY_LENGTH} characters` };
+   }
+   return { ok: true, value: { title, body } };
+@@ -48,7 +53,7 @@ export function validateNotePatch(input: unknown): PatchValidationResult {
+     if (typeof title !== 'string' || title.length === 0) {
+       return { ok: false, message: 'title must be a non-empty string' };
+     }
+-    if (title.length > MAX_TITLE_LENGTH) {
++    if (codePointLength(title) > MAX_TITLE_LENGTH) {
+       return { ok: false, message: `title must be at most ${MAX_TITLE_LENGTH} characters` };
+     }
+     value.title = title;
+@@ -57,7 +62,7 @@ export function validateNotePatch(input: unknown): PatchValidationResult {
+     if (typeof body !== 'string') {
+       return { ok: false, message: 'body must be a string' };
+     }
+-    if (body.length > MAX_BODY_LENGTH) {
++    if (codePointLength(body) > MAX_BODY_LENGTH) {
+       return { ok: false, message: `body must be at most ${MAX_BODY_LENGTH} characters` };
+     }
+     value.body = body;
+diff --git a/test/notes.test.ts b/test/notes.test.ts
+index 3308e9c..76a3670 100644
+--- a/test/notes.test.ts
++++ b/test/notes.test.ts
+@@ -86,6 +86,13 @@ describe('notes API', () => {
+     assert.equal(res.status, 201);
+   });
+ 
++  it('counts length in code points, not UTF-16 units', async () => {
++    const ok = await post(JSON.stringify({ title: '😀'.repeat(120), body: '😀'.repeat(10000) }));
++    assert.equal(ok.status, 201);
++    const tooLong = await post(JSON.stringify({ title: '😀'.repeat(121) }));
++    assert.equal(tooLong.status, 422);
++  });
++
+   it('returns 404 for unknown paths and 405 for other methods', async () => {
+     assert.equal((await fetch(`${baseUrl}/nope`)).status, 404);
+     assert.equal((await fetch(`${baseUrl}/notes`, { method: 'DELETE' })).status, 405);

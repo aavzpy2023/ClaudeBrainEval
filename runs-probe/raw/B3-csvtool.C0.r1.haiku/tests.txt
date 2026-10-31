@@ -1,0 +1,5 @@
+--- FAIL: TestOracleAutoDelimiterWorksForSelect (0.00s)
+    oracle_test.go:71: code 1, got ""
+FAIL
+FAIL	csvtool	0.192s
+FAIL

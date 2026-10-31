@@ -1,0 +1,9 @@
+`GET /notes` now accepts a `q` parameter. When it's present, the response contains only notes whose title or body contains the text, matched case-insensitively, still newest first. Without `q`, the handler returns the same result as before.
+
+The change is in `src/server.ts`: the handler reads `q` from the URL and filters the existing `store.list()` output, so the store is untouched. I also added a test to `test/notes.test.ts` that checks matching on body, matching on title with different casing, exclusion of non-matches, and ordering. All 29 tests pass with `npm test`.
+
+Two behaviours to be aware of:
+- `?q=` (present but empty) matches every note, since every string contains the empty string.
+- Matching is a plain substring check on the lowercased strings, so there's no tokenising or accent folding.
+
+I didn't commit the change.

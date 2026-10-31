@@ -1,0 +1,22 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..470aa56 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -30,6 +30,7 @@ def main(argv=None):
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
++    ls.add_argument("--legacy", action="store_true", help="print the pre-priority format")
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -65,6 +66,9 @@ def main(argv=None):
+     elif args.command == "dead":
+         for task_id, payload in repo.list_dead():
+             print(f"{task_id}\t{payload}")
++    elif args.legacy:
++        for task_id, _priority, payload in repo.list_tasks():
++            print(f"{task_id}\t{payload}")
+     elif args.json:
+         _print_json(
+             {

@@ -1,0 +1,6 @@
+I added `csvtool tail [-n N] <file>`. `go vet` and `go test ./...` pass, and a piped run with `--delim ';'` printed the header and last 2 rows as expected. I did not run `gofmt`, because the shell denied it, so formatting is unchecked.
+
+- **Behaviour:** It prints the header, then the last N data rows. N defaults to 10, the same as `head`. It accepts `-` for stdin, `--delim`, `--lazy-quotes`, and ragged rows, matching the other subcommands. `--format json` is rejected, as it is for `select`, `filter` and `stats`. A negative N is an error.
+- **Large files:** It streams the input and keeps only N rows in a ring buffer, so memory depends on N, not file size. Rows are copied because the reader reuses its record buffer.
+- **Files changed:** `csvtool.go` (new `Tail`), `main.go` (the `tail` case, `runTail`, and a usage line), and a new `tail_test.go`. The tests cover N below, equal to, and above the row count, N=0, header-only and empty input, a negative N, a `;` delimiter with ragged rows, and lazy quotes.
+- **Not done:** I did not commit.

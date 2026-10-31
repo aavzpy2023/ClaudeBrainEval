@@ -1,11 +1,13 @@
 """Shared helpers: the run matrix and the results ledger."""
 import csv
 import json
+import os
 import random
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-RESULTS = ROOT / "runs" / "results.csv"
+RUNS = Path(os.environ["EVAL_RUNS_DIR"]) if "EVAL_RUNS_DIR" in os.environ else ROOT / "runs"  # probes write elsewhere
+RESULTS = RUNS / "results.csv"
 COLUMNS = [
     "run_id", "task_id", "project", "category", "condition", "rep", "arm", "model", "effort",
     "status", "new_input", "cache_creation", "cache_read", "output", "turns", "latency_s",
@@ -52,11 +54,12 @@ def planned_runs(phase: str) -> list[dict]:
     return runs
 
 
-def done_ids() -> set[str]:
+def done_ids(results: Path | None = None) -> set[str]:
     """Run ids with a valid (status=ok) row. quota/error rows are retried."""
-    if not RESULTS.exists():
+    results = results or RESULTS
+    if not results.exists():
         return set()
-    with RESULTS.open(newline="") as f:
+    with results.open(newline="") as f:
         return {r["run_id"] for r in csv.DictReader(f) if r["status"] == "ok"}
 
 

@@ -1,0 +1,54 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..396d6b6 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -24,9 +24,21 @@ export type NoteStore = {
+ // TODO(open question, no owner yet): persistence is only safe for a single process. Concurrent writes
+ // from several processes can lose updates (each rewrites the whole file from its own in-memory copy).
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
++// Files from the first iterations stored createdAt as local 'YYYY-MM-DD HH:mm' (see commit 272e397).
++// Read them as that local time so the instant they meant is kept. New writes never use this form.
++const LEGACY_LOCAL = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
++
++function legacyLocalToEpochMs(s: string): number {
++  const m = LEGACY_LOCAL.exec(s);
++  if (!m) throw new Error(`Unrecognized createdAt in notes file: ${s}`);
++  const [, y, mo, d, h, mi] = m.map(Number);
++  return new Date(y, mo - 1, d, h, mi).getTime();
++}
++
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  const raw = JSON.parse(readFileSync(file, 'utf8')) as Array<Omit<StoredNote, 'createdAt'> & { createdAt: number | string }>;
++  return raw.map((n) => ({ ...n, createdAt: typeof n.createdAt === 'string' ? legacyLocalToEpochMs(n.createdAt) : n.createdAt }));
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..0922e95 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -1,6 +1,6 @@
+ import { after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
++import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import { createStore } from '../src/store.ts';
+@@ -42,4 +42,14 @@ describe('note store persistence', () => {
+     writeFileSync(file, JSON.stringify([{ id: 'x', title: 't', body: 'b', createdAt: 0 }]));
+     assert.equal(createStore(undefined, file).get('x')?.createdAt, '1970-01-01T00:00:00.000Z');
+   });
++
++  it('reads the legacy local-time createdAt format as the same instant', () => {
++    const file = fileIn('legacy.json');
++    writeFileSync(file, JSON.stringify([{ id: 'old', title: 't', body: 'b', createdAt: '2026-10-31 14:05' }]));
++    const store = createStore(undefined, file);
++    assert.equal(store.get('old')?.createdAt, new Date(2026, 9, 31, 14, 5).toISOString());
++    store.create({ title: 'new', body: 'b' });
++    const saved = JSON.parse(readFileSync(file, 'utf8')) as Array<{ createdAt: unknown }>;
++    assert.ok(saved.every((n) => typeof n.createdAt === 'number'));
++  });
+ });

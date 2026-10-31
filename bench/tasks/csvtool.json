@@ -309,5 +309,57 @@
     },
     "pilot": false,
     "opus": false
+  },
+  {
+    "id": "D4-csvtool",
+    "project": "csvtool",
+    "category": "D",
+    "base": "drift",
+    "kind": "code",
+    "prompt": "Add a `distinct -c <column> <file>` subcommand that prints the distinct values of one column, in order of first appearance, one per line. It must accept `-` for standard input, `--delim` and `--lazy-quotes` like the other subcommands. A column that does not exist must fail the way `select` fails for one.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/D4-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/D4-csvtool/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E1c-csvtool",
+    "project": "csvtool",
+    "category": "E",
+    "subtype": "E1",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Add a `tail [-n N] <file>` subcommand that prints the header and the last N data rows, with N defaulting to the same value as `head`'s default. It must accept `-` for standard input, `--delim` and `--lazy-quotes` like the other subcommands, and it will be run on very large files.",
+    "oracle": {
+      "files": {
+        "oracle_test.go": "bench/oracles/E1c-csvtool/oracle_test.go"
+      },
+      "cmd": [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "Oracle"
+      ],
+      "solution": "bench/oracles/E1c-csvtool/solution.patch"
+    },
+    "evidence": {
+      "in_transcript": "session c4: output must be streamed, reading everything with ReadAll was rejected because users run it on multi-gigabyte files",
+      "digest_gap": "the final digest does not mention streaming or the rejection of ReadAll",
+      "verified": "checked: fact present in the archived transcript and absent from the final digest"
+    },
+    "pilot": false,
+    "opus": false
   }
 ]

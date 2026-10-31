@@ -1,0 +1,7 @@
+I added `taskq list --legacy`. It prints the pre-priority format, one `id<TAB>payload` line per task, and the normal `list` output is unchanged. All 26 tests pass, including a new one for `--legacy`.
+
+- **Format:** I took the old format from the commit that added priorities (`adbc93b`), which printed `{task_id}\t{payload}`. The `dead` command already uses that shape.
+- **Code:** `taskq/cli.py` has the new flag on `list`. `--legacy` and `--json` are mutually exclusive, so passing both is an argparse error rather than a silent choice.
+- **Test:** `tests/test_cli.py` has `test_list_legacy`, which adds a task at priority 0 and checks that `--legacy` prints `1\thello`.
+
+I haven't committed anything. The changes are in the working tree of `/tmp/claude-brain-eval/runs/E1c-taskq.C0.r1.haiku/taskq`.

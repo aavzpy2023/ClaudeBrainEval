@@ -1,0 +1,8 @@
+I added the `~` operator to `filter`. `name~an` keeps rows where the field contains the value, and the comparison is always case-sensitive text, so `age~3` matches "30" and "35" rather than comparing numbers. `go test ./...` passes.
+
+Changes:
+- **`csvtool.go`**: `ParseCondition` recognises `~` as an operator. `match` checks for `~` first and uses `strings.Contains`, before the numeric-or-string comparison.
+- **`main.go`**: the `--where` help text lists `~` as the contains operator.
+- **`csvtool_test.go`**: new cases for parsing `name~an`, and for filtering on contains, case-sensitivity (`name~B` matches nothing), and text-not-numeric (`age~3`, `age~1`).
+
+I could not run `gofmt` because the shell asked for approval and I didn't get it. The new test-table comments may need alignment, so run `gofmt -l .` before committing. I haven't committed anything.

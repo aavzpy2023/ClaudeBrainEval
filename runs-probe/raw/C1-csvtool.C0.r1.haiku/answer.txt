@@ -1,0 +1,16 @@
+I added `csvtool count <file>`. The Go tests pass, but I could not run the built binary: the sandbox blocked those shell calls, so the stdin, `--delim`, and missing-file checks are verified by tests and by reading the code, not by running it.
+
+**What changed**
+- **`count.go` (new):** `Count` reads the header, then counts the remaining records and prints the number on one line. Empty input prints `0`, and header-only input prints `0`.
+- **`count_test.go` (new):** covers normal counting, header-only and empty input, `--delim` (via `;`), and `--lazy-quotes` (a bare quote fails without the flag and succeeds with it).
+- **`main.go`:** adds the `count` case, which accepts `--delim` and `--lazy-quotes` like the other subcommands and treats `-` as stdin. It also adds `runCount` and a usage line.
+
+**Verification**
+- `go test ./...` passes.
+- `go vet ./...` is clean.
+- A missing file exits 1: `runCount` returns the `os.Open` error, and `fail` exits 1 for errors that are neither usage nor missing-column errors. I checked this by reading the code, not by running it.
+
+**Things to know**
+- `go fmt` reformatted `csvtool_test.go`, which this change doesn't touch. I reverted that file, so the diff contains only the files above.
+- I did not commit. The changes are in the working tree on `main`.
+- I did not add `--format` to `count`, since the request didn't mention it. Other subcommands reject `--format json`, and `count` does the same by inheriting the common `format()` check.

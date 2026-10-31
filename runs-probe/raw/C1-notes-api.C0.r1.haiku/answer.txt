@@ -1,0 +1,6 @@
+I added `GET /health` returning `200` with `{"ok": true}`. Any other method on `/health` returns `405` with an `Allow: GET` header. The full suite passes (30 of 30).
+
+- **`src/server.ts`**: the `/health` branch sits before the `/notes` routes, following the same pattern as the other routes.
+- **`test/notes.test.ts`**: two new tests, one for the 200 response and one that checks POST, PUT, PATCH and DELETE each get a 405 with `allow: GET`.
+
+I didn't run a TypeScript type check because the `tsc` command was blocked by a permission prompt. I didn't commit either, since you didn't ask for one.

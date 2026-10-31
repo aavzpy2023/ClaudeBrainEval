@@ -1,0 +1,36 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..990df0d 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -20,7 +20,8 @@ def main(argv=None):
+     sub = parser.add_subparsers(dest="command", required=True)
+     add = sub.add_parser("add", help="enqueue a task")
+     add.add_argument("text")
+-    add.add_argument(
++    group = add.add_mutually_exclusive_group()
++    group.add_argument(
+         "--priority",
+         type=int,
+         choices=range(repository.MIN_PRIORITY, repository.MAX_PRIORITY + 1),
+@@ -28,6 +29,11 @@ def main(argv=None):
+         default=repository.DEFAULT_PRIORITY,
+         help="0 is most urgent, like nice values (default: %(default)s)",
+     )
++    group.add_argument(
++        "--urgent",
++        action="store_true",
++        help="one step more urgent than the default priority",
++    )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
+     claim = sub.add_parser("claim", help="claim the next pending task")
+@@ -41,7 +47,8 @@ def main(argv=None):
+ 
+     repo = Repository()
+     if args.command == "add":
+-        print(repo.enqueue(args.text, priority=args.priority))
++        priority = repository.DEFAULT_PRIORITY - 1 if args.urgent else args.priority
++        print(repo.enqueue(args.text, priority=priority))
+     elif args.command == "claim":
+         task = repo.claim()
+         if args.json:

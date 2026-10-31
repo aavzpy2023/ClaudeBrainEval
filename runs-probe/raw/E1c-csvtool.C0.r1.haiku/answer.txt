@@ -1,0 +1,12 @@
+I added `csvtool tail [-n N] <file>`. `go test ./...` and `go vet` pass, but I could not check the binary by hand: the shell kept asking for approval to run it, so the CLI paths (stdin, `--delim`, `--lazy-quotes`, large files) are covered only by the unit tests. I also could not run `gofmt -l`, so formatting is unchecked. Nothing is committed.
+
+What changed:
+
+- **`tail.go`** (new): `Tail` streams the input and keeps only the last N rows in a fixed ring buffer, so memory depends on N, not file size. It prints the header and then the kept rows. A negative N is an error, and N=0 prints only the header. If reading fails partway, nothing is printed.
+- **`main.go`**: adds the `tail` subcommand with `-n`, `--delim`, and `--lazy-quotes`, and `-` for stdin. The usage string lists it. `head`'s default of 10 now comes from a shared `defaultRows` constant, so the two can't drift apart.
+- **`tail_test.go`** (new): covers N below, equal to, and above the row count; N=0; quoted multi-line fields with a custom delimiter; empty and header-only input; negative N; and no output on a read error.
+
+Decisions I made that you may want to change:
+
+- `tail` reads the whole file before printing anything, because it has to know which rows are last. This is the only way to get the last N rows without seeking, and it means output starts only after the input ends.
+- `tail` does not accept `--format json`, since the JSON shape is still undecided and `head` is the only subcommand that takes it.

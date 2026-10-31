@@ -1,0 +1,101 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..b39badf 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -275,3 +275,50 @@ func Select(r io.Reader, w io.Writer, cols []string, delim rune, lazy bool) erro
+ 	cw.Flush()
+ 	return cw.Error()
+ }
++
++// Distinct writes the distinct values of column col, in order of first appearance, one per line.
++// A missing column is reported as ErrMissingColumn before anything is written.
++func Distinct(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	cr.ReuseRecord = true
++	header, err := cr.Read()
++	if err == io.EOF {
++		return fmt.Errorf("%w: %q (empty input)", ErrMissingColumn, col)
++	}
++	if err != nil {
++		return err
++	}
++	idx := -1
++	for j, h := range header {
++		if h == col {
++			idx = j
++			break
++		}
++	}
++	if idx < 0 {
++		return fmt.Errorf("%w: %q", ErrMissingColumn, col)
++	}
++	seen := map[string]bool{}
++	for {
++		rec, err := cr.Read()
++		if err == io.EOF {
++			return nil
++		}
++		if err != nil {
++			return err
++		}
++		v := ""
++		if idx < len(rec) {
++			v = rec[idx]
++		}
++		if !seen[v] {
++			seen[v] = true
++			if _, err := fmt.Fprintln(w, v); err != nil {
++				return err
++			}
++		}
++	}
++}
+diff --git a/main.go b/main.go
+index 83bcce5..1316704 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool distinct -c name <file>\n       csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,6 +128,19 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "distinct":
++		fs := flag.NewFlagSet("distinct", flag.ExitOnError)
++		c := fs.String("c", "", "column whose distinct values to print")
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		fs.Parse(os.Args[2:])
++		if *c == "" || fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runDistinct(fs.Arg(0), *c, d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+@@ -198,3 +211,12 @@ func runFilter(path string, c Condition, delim rune, lazy bool) error {
+ 	defer f.Close()
+ 	return Filter(f, os.Stdout, c, delim, lazy)
+ }
++
++func runDistinct(path, col string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Distinct(f, os.Stdout, col, delim, lazy)
++}

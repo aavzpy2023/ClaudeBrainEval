@@ -1,0 +1,13 @@
+▶ oracle: legacy notes file
+  ✔ loads first-iteration timestamps keeping the instant they meant (2.841494ms)
+  ✔ mixes legacy and current notes, newest first (1.573291ms)
+  ✔ writes the current representation back (3.099149ms)
+✔ oracle: legacy notes file (9.70301ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 181.440932

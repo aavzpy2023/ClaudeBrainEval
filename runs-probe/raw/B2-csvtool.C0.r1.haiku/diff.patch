@@ -1,0 +1,113 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..93e9563 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -155,15 +155,11 @@ func Head(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ // ErrUsage marks a bad command-line combination; the CLI exits 2 for it.
+ var ErrUsage = errors.New("usage")
+ 
+-// HeadJSON is Head with JSON output: the first n data rows, each written as
+-// one JSON object per line keyed by the header, in column order. The header
+-// itself is not printed. A row with more fields than the header is an error;
+-// a short row gets null for its missing fields.
+-//
+-// TODO(undecided): the final JSON format is NOT decided. JSON Lines is a
+-// temporary choice; it may become a single JSON array instead. Do not rely on
+-// this output shape, and do not extend --format json to other subcommands
+-// until it is settled.
++// HeadJSON is Head with JSON output: the first n data rows as one JSON array
++// of objects on a single line, keyed by the header in column order, followed
++// by a newline. The header itself is not printed. No rows, or empty input,
++// prints []. A row with more fields than the header is an error; a short row
++// gets null for its missing fields.
+ func HeadJSON(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 	if n < 0 {
+ 		return fmt.Errorf("n must be >= 0, got %d", n)
+@@ -174,7 +170,8 @@ func HeadJSON(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 	cr.FieldsPerRecord = -1
+ 	header, err := cr.Read()
+ 	if err == io.EOF {
+-		return nil
++		_, err := io.WriteString(w, "[]\n")
++		return err
+ 	}
+ 	if err != nil {
+ 		return err
+@@ -186,6 +183,7 @@ func HeadJSON(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 		}
+ 	}
+ 	bw := bufio.NewWriter(w)
++	bw.WriteByte('[')
+ 	for i := 0; i < n; i++ {
+ 		rec, err := cr.Read()
+ 		if err == io.EOF {
+@@ -199,6 +197,9 @@ func HeadJSON(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 			bw.Flush()
+ 			return fmt.Errorf("row %d has %d fields, header has %d", i+1, len(rec), len(header))
+ 		}
++		if i > 0 {
++			bw.WriteByte(',')
++		}
+ 		bw.WriteByte('{')
+ 		for j, k := range keys {
+ 			if j > 0 {
+@@ -213,8 +214,9 @@ func HeadJSON(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 				bw.WriteString("null")
+ 			}
+ 		}
+-		bw.WriteString("}\n")
++		bw.WriteString("}")
+ 	}
++	bw.WriteString("]\n")
+ 	return bw.Flush()
+ }
+ 
+diff --git a/json_test.go b/json_test.go
+index ed0fd48..660d375 100644
+--- a/json_test.go
++++ b/json_test.go
+@@ -16,21 +16,27 @@ func TestHeadJSON(t *testing.T) {
+ 	if err := HeadJSON(strings.NewReader(in), &buf, 2, ',', false); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	want := `{"name":"ann","note":"say \"hi\""}` + "\n" + `{"name":"bob","note":null}` + "\n"
++	want := `[{"name":"ann","note":"say \"hi\""},{"name":"bob","note":null}]` + "\n"
+ 	if buf.String() != want {
+ 		t.Errorf("got %q want %q", buf.String(), want)
+ 	}
+ }
+ 
+ func TestHeadJSONEdges(t *testing.T) {
+-	var buf bytes.Buffer
+-	if err := HeadJSON(strings.NewReader(sample), &buf, 0, ',', false); err != nil || buf.Len() != 0 {
+-		t.Errorf("n=0: %q, %v", buf.String(), err)
+-	}
+-	if err := HeadJSON(strings.NewReader(""), &buf, 3, ',', false); err != nil || buf.Len() != 0 {
+-		t.Errorf("empty: %q, %v", buf.String(), err)
++	for _, tc := range []struct {
++		name, in string
++		n        int
++	}{
++		{"n=0", sample, 0},
++		{"empty", "", 3},
++		{"header only", "a,b\n", 3},
++	} {
++		var buf bytes.Buffer
++		if err := HeadJSON(strings.NewReader(tc.in), &buf, tc.n, ',', false); err != nil || buf.String() != "[]\n" {
++			t.Errorf("%s: %q, %v", tc.name, buf.String(), err)
++		}
+ 	}
+-	if err := HeadJSON(strings.NewReader("a\n1,2\n"), &buf, 3, ',', false); err == nil {
++	if err := HeadJSON(strings.NewReader("a\n1,2\n"), &bytes.Buffer{}, 3, ',', false); err == nil {
+ 		t.Error("want error for row longer than header")
+ 	}
+ }
+@@ -87,7 +93,7 @@ func TestFormatJSONCLI(t *testing.T) {
+ 		return so.String(), se.String(), code
+ 	}
+ 	out, _, code := run("head", "--format", "json", "-n", "1", file)
+-	if want := `{"name":"ann","age":"30","city":"NYC"}` + "\n"; code != 0 || out != want {
++	if want := `[{"name":"ann","age":"30","city":"NYC"}]` + "\n"; code != 0 || out != want {
+ 		t.Errorf("head json: code %d, %q", code, out)
+ 	}
+ 	for _, args := range [][]string{

@@ -1,0 +1,11 @@
+`createStore` now reads files with legacy `'YYYY-MM-DD HH:mm'` timestamps and converts them to epoch ms. All 31 tests pass under the default timezone, `America/New_York` and `Asia/Kolkata`.
+
+**What changed**
+- `src/store.ts`: `load()` converts any string `createdAt` with `fromLegacyLocal()`. The old `formatLocal` wrote the server's local wall-clock time, so the conversion reads it back as local time with `new Date(y, m-1, d, h, min)`. That keeps the instant the old note meant. Numeric timestamps pass through unchanged. Writes still use only the epoch-ms form, so the first save rewrites the whole file in the current format.
+- `test/persistence.test.ts`: three new tests cover the conversion (checked against the local-time construction, so it holds in any timezone), the rewrite to numbers on the next save, and rejection of an unrecognized string with `Unrecognized createdAt in notes file`.
+
+**Choices to review**
+- An unrecognized string timestamp makes startup fail rather than being guessed at. This matches how a corrupt file already behaves.
+- Legacy local times that fall in a DST gap, such as 02:30 on a spring-forward night, have no real instant. `new Date` moves them forward by an hour. The same wall-clock time repeated during fall-back resolves to the first occurrence. Both are edge cases of the old format, and the file doesn't record the offset, so the original instant can't be recovered exactly.
+
+Nothing is committed.

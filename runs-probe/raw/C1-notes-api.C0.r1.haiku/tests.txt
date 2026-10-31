@@ -1,0 +1,13 @@
+▶ oracle: health
+  ✔ GET /health returns 200 {ok:true} (36.683982ms)
+  ✔ other methods on /health get 405 (7.774952ms)
+  ✔ notes routes are unaffected (4.946138ms)
+✔ oracle: health (50.69234ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 251.616157

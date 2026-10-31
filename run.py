@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from envsetup import BRAIN_REPO, WORK, make_env, reset
-from evalcommon import ROOT, append_row, done_ids, planned_runs
+from evalcommon import ROOT, RUNS, append_row, done_ids, planned_runs
 
-RAW = ROOT / "runs" / "raw"
+RAW = RUNS / "raw"
 CODE_TOOLS = "Read,Write,Edit,Glob,Grep,Bash(git *),Bash(python3 *),Bash(python *),Bash(node *),Bash(go *),Bash(npm *)"
 QA_TOOLS = "Read,Glob,Grep,Bash(git *)"
 RECALL_TOOL = "Bash(claude-brain *)"
@@ -207,7 +207,7 @@ def main() -> None:
     ap.add_argument("--only", default="", help="substring filter on run_id, e.g. 'haiku' or 'A1-taskq'")
     args = ap.parse_args()
 
-    done = done_ids()
+    done = done_ids()  # the pilot lives in runs-pilot/ (EVAL_RUNS_DIR=runs-pilot to rerun it); main starts empty
     pending = [r for r in planned_runs(args.phase) if r["run_id"] not in done and args.only in r["run_id"]]
     print(f"{args.phase}: {len(pending)} pending, {len(done)} done")
     if args.max_runs:

@@ -1,0 +1,43 @@
+diff --git a/src/server.ts b/src/server.ts
+index 3a71474..bf53c1e 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -43,6 +43,15 @@ export function createServer(store: NoteStore = createStore()): Server {
+   return createHttpServer(async (req, res) => {
+     const { pathname } = new URL(req.url ?? '/', 'http://localhost');
+ 
++    if (pathname === '/health') {
++      if (req.method === 'GET') {
++        return sendJson(res, 200, { ok: true });
++      }
++
++      res.setHeader('allow', 'GET');
++      return sendJson(res, 405, { error: 'Method not allowed' });
++    }
++
+     if (pathname === '/notes') {
+       if (req.method === 'GET') {
+         return sendJson(res, 200, store.list());
+diff --git a/test/notes.test.ts b/test/notes.test.ts
+index 3308e9c..95a147b 100644
+--- a/test/notes.test.ts
++++ b/test/notes.test.ts
+@@ -190,4 +190,18 @@ describe('notes API', () => {
+   it('returns 405 for unsupported methods on /notes/:id', async () => {
+     assert.equal((await fetch(`${baseUrl}/notes/x`, { method: 'POST' })).status, 405);
+   });
++
++  it('GET /health answers 200 with { ok: true }', async () => {
++    const res = await fetch(`${baseUrl}/health`);
++    assert.equal(res.status, 200);
++    assert.deepEqual(await res.json(), { ok: true });
++  });
++
++  it('returns 405 for unsupported methods on /health', async () => {
++    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
++      const res = await fetch(`${baseUrl}/health`, { method });
++      assert.equal(res.status, 405, method);
++      assert.equal(res.headers.get('allow'), 'GET', method);
++    }
++  });
+ });

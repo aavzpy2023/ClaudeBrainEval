@@ -1,0 +1,9 @@
+`--delim auto` now works on `head`, `select`, `filter` and `stats`. `go test` and `go vet` pass, but I did not run the built binary end to end because the shell kept asking for approval.
+
+- **Detection:** `auto` reads the first line of the input and picks the most frequent of comma, semicolon, tab and pipe, ignoring anything inside quotes. Ties go to the earlier one in that order, and no candidate at all gives a comma. The chosen delimiter is then used for both input and output.
+- **Stdin:** the first line is read and then put back, so `auto` also works with `-`.
+- **Explicit delimiters:** they take the same path as before; `auto` is only a new value.
+- **Edits in `main.go`:** I replaced the old "do not add detection" TODO with the new behaviour and updated the usage text. The `--delim` help now lists `auto`.
+- **Tests:** `delim_test.go` is new. It covers the detection rules, including quoted text and ties, and an `auto` head round trip. `csvtool_test.go` has one new `auto` case in the flag test.
+
+I haven't committed anything.

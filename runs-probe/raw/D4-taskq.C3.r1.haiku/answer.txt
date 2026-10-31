@@ -1,0 +1,9 @@
+I added `--urgent` to `taskq add`. The suite passes: 27 tests, including two new ones for this change.
+
+- **`--urgent`** enqueues the task at `DEFAULT_PRIORITY - 1`. With the current default of 3 (from `taskq/repository.py`), that is priority 2. Since 0 is most urgent, that is one step more urgent than the default.
+- **Combining with `--priority`** is a usage error. `--priority` and `--urgent` are in an argparse mutually exclusive group, so argparse exits with status 2 before anything is enqueued. A test checks both the exit code and that the queue stays empty.
+- **Default behaviour** is unchanged. `--priority` no longer has an argparse default, so it can be told apart from "not given". With neither flag, the task still gets the default priority.
+
+The changes are in `taskq/cli.py` and `tests/test_cli.py`. I did not commit them.
+
+I did not run a manual end-to-end check from the shell, because the sandbox blocked the compound command. The unit tests cover the same paths through `cli.main`.

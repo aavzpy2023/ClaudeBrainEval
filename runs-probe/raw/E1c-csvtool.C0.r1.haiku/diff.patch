@@ -1,0 +1,203 @@
+diff --git a/main.go b/main.go
+index 3c02ac8..7d94c43 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,10 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++// defaultRows is how many data rows head and tail print when -n is not given.
++const defaultRows = 10
++
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool tail [-n N] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -64,7 +67,7 @@ func main() {
+ 	switch os.Args[1] {
+ 	case "head":
+ 		fs := flag.NewFlagSet("head", flag.ExitOnError)
+-		n := fs.Int("n", 10, "number of rows to print after the header")
++		n := fs.Int("n", defaultRows, "number of rows to print after the header")
+ 		delim := delimFlag(fs)
+ 		lazy := lazyFlag(fs)
+ 		format := formatFlag(fs, true)
+@@ -78,6 +81,22 @@ func main() {
+ 		fm, err := format()
+ 		fail(err)
+ 		fail(runHead(fs.Arg(0), *n, d, *lazy, fm == "json"))
++	case "tail":
++		fs := flag.NewFlagSet("tail", flag.ExitOnError)
++		n := fs.Int("n", defaultRows, "number of rows to print after the header, counted from the end")
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		format := formatFlag(fs, false)
++		fs.Parse(os.Args[2:])
++		_, err := format()
++		fail(err)
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runTail(fs.Arg(0), *n, d, *lazy))
+ 	case "select":
+ 		fs := flag.NewFlagSet("select", flag.ExitOnError)
+ 		c := fs.String("c", "", "comma-separated column names to print")
+@@ -166,6 +185,15 @@ func runHead(path string, n int, delim rune, lazy, asJSON bool) error {
+ 	return Head(f, os.Stdout, n, delim, lazy)
+ }
+ 
++func runTail(path string, n int, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Tail(f, os.Stdout, n, delim, lazy)
++}
++
+ func runSelect(path string, cols []string, delim rune, lazy bool) error {
+ 	f, err := open(path)
+ 	if err != nil {
+diff --git a/tail.go b/tail.go
+new file mode 100644
+index 0000000..2e644b5
+--- /dev/null
++++ b/tail.go
+@@ -0,0 +1,58 @@
++package main
++
++import (
++	"encoding/csv"
++	"fmt"
++	"io"
++)
++
++// Tail writes the header plus the last n data rows of the CSV in r to w. The
++// whole input is read, but only the last n rows are held in memory at once, so
++// memory use does not depend on input size. Nothing is written if reading fails.
++func Tail(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
++	if n < 0 {
++		return fmt.Errorf("n must be >= 0, got %d", n)
++	}
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	cr.ReuseRecord = true
++	header, err := cr.Read()
++	if err == io.EOF {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	header = append([]string(nil), header...)
++	ring := make([][]string, n)
++	total := 0
++	for {
++		rec, err := cr.Read()
++		if err == io.EOF {
++			break
++		}
++		if err != nil {
++			return err
++		}
++		if n > 0 {
++			i := total % n
++			ring[i] = append(ring[i][:0], rec...)
++		}
++		total++
++	}
++	cw := csv.NewWriter(w)
++	cw.Comma = delim
++	if err := cw.Write(header); err != nil {
++		return err
++	}
++	first := max(total-n, 0)
++	for i := first; i < total; i++ {
++		if err := cw.Write(ring[i%n]); err != nil {
++			return err
++		}
++	}
++	cw.Flush()
++	return cw.Error()
++}
+diff --git a/tail_test.go b/tail_test.go
+new file mode 100644
+index 0000000..c57606e
+--- /dev/null
++++ b/tail_test.go
+@@ -0,0 +1,69 @@
++package main
++
++import (
++	"strings"
++	"testing"
++)
++
++func tailOf(in string, n int, delim rune, lazy bool) (string, error) {
++	var sb strings.Builder
++	err := Tail(strings.NewReader(in), &sb, n, delim, lazy)
++	return sb.String(), err
++}
++
++func TestTail(t *testing.T) {
++	in := "a,b\n1,x\n2,y\n3,z\n4,w\n5,v\n"
++	cases := []struct {
++		n    int
++		want string
++	}{
++		{0, "a,b\n"},
++		{2, "a,b\n4,w\n5,v\n"},
++		{5, "a,b\n1,x\n2,y\n3,z\n4,w\n5,v\n"},
++		{9, "a,b\n1,x\n2,y\n3,z\n4,w\n5,v\n"},
++	}
++	for _, tc := range cases {
++		got, err := tailOf(in, tc.n, ',', false)
++		if err != nil {
++			t.Fatalf("n=%d: %v", tc.n, err)
++		}
++		if got != tc.want {
++			t.Errorf("n=%d: got %q, want %q", tc.n, got, tc.want)
++		}
++	}
++}
++
++func TestTailQuotedFieldsAndDelim(t *testing.T) {
++	got, err := tailOf("a;b\n\"x;y\";1\n\"multi\nline\";2\n", 1, ';', false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "a;b\n\"multi\nline\";2\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestTailEmptyAndHeaderOnly(t *testing.T) {
++	if got, err := tailOf("", 3, ',', false); err != nil || got != "" {
++		t.Errorf("empty input: got %q, %v", got, err)
++	}
++	if got, err := tailOf("a,b\n", 3, ',', false); err != nil || got != "a,b\n" {
++		t.Errorf("header only: got %q, %v", got, err)
++	}
++}
++
++func TestTailRejectsNegativeN(t *testing.T) {
++	if _, err := tailOf("a\n1\n", -1, ',', false); err == nil {
++		t.Error("want error for n < 0")
++	}
++}
++
++func TestTailReadErrorPrintsNothing(t *testing.T) {
++	got, err := tailOf("a,b\n1,2\n\"3,4\n", 5, ',', false)
++	if err == nil {
++		t.Fatal("want error for unterminated quote")
++	}
++	if got != "" {
++		t.Errorf("got %q, want no output on error", got)
++	}
++}

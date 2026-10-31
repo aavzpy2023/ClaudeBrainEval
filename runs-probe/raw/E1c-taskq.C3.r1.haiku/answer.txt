@@ -1,0 +1,9 @@
+`taskq list --legacy` now prints the old `id<TAB>payload` format, one task per line. The normal `list` output is unchanged. All 26 tests pass, including a new one for the flag.
+
+I took the old format from commit `adbc93b^`, the last version before priorities, which printed `for task_id, payload in ...: print(f"{task_id}\t{payload}")`.
+
+Changes:
+- `taskq/cli.py`: `list` gets a `--legacy` flag. It is mutually exclusive with `--json`, so `list --json --legacy` is an argparse error rather than a silent pick.
+- `tests/test_cli.py`: `test_list_legacy_omits_priority` checks that the priority column is dropped and the order is kept.
+
+I did not commit the change.

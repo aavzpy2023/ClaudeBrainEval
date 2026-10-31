@@ -1,0 +1,68 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..9afffd3 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -18,9 +18,9 @@ type Condition struct {
+ }
+ 
+ // ParseCondition parses expr of the form <column><op><value>, where op is one
+-// of =, !=, >, <, >=, <=.
++// of =, !=, >, <, >=, <=, ~.
+ func ParseCondition(expr string) (Condition, error) {
+-	i := strings.IndexAny(expr, "=!<>")
++	i := strings.IndexAny(expr, "=!<>~")
+ 	if i <= 0 {
+ 		return Condition{}, fmt.Errorf("invalid condition %q", expr)
+ 	}
+@@ -35,9 +35,13 @@ func ParseCondition(expr string) (Condition, error) {
+ 	return Condition{Col: expr[:i], Op: op, Val: rest[len(op):]}, nil
+ }
+ 
+-// match reports whether field satisfies c. If both sides parse as numbers the
+-// comparison is numeric, otherwise it is a string comparison.
++// match reports whether field satisfies c. For ~ the field must contain the
++// value, always as text. Otherwise, if both sides parse as numbers the
++// comparison is numeric, else it is a string comparison.
+ func (c Condition) match(field string) bool {
++	if c.Op == "~" {
++		return strings.Contains(field, c.Val)
++	}
+ 	var cmp int
+ 	a, errA := strconv.ParseFloat(field, 64)
+ 	b, errB := strconv.ParseFloat(c.Val, 64)
+diff --git a/csvtool_test.go b/csvtool_test.go
+index 18a695f..1528606 100644
+--- a/csvtool_test.go
++++ b/csvtool_test.go
+@@ -220,6 +220,7 @@ func TestParseCondition(t *testing.T) {
+ 		{"name=bob", Condition{"name", "=", "bob"}, true},
+ 		{"name!=bob", Condition{"name", "!=", "bob"}, true},
+ 		{"name=", Condition{"name", "=", ""}, true},
++		{"name~an", Condition{"name", "~", "an"}, true},
+ 		{"age", Condition{}, false},
+ 		{">30", Condition{}, false},
+ 		{"age!30", Condition{}, false},
+@@ -247,6 +248,10 @@ func TestFilter(t *testing.T) {
+ 		{"name>bob", []string{"cy", "dee"}}, // string comparison
+ 		{"name=bob", []string{"bob"}},
+ 		{"age<abc", []string{"ann", "bob", "cy", "dee"}}, // non-numeric value: string comparison
++		{"name~an", []string{"ann"}},
++		{"name~B", nil},                     // case-sensitive: "bob" does not contain "B"
++		{"age~3", []string{"bob", "cy"}},    // text, not numeric: 30 and 35 contain "3"
++		{"age~1", []string{"dee"}},          // 100 contains "1"; 25 does not
+ 	}
+ 	for _, tc := range tests {
+ 		c, err := ParseCondition(tc.where)
+diff --git a/main.go b/main.go
+index 3c02ac8..9ef2716 100644
+--- a/main.go
++++ b/main.go
+@@ -96,7 +96,7 @@ func main() {
+ 		fail(runSelect(fs.Arg(0), strings.Split(*c, ","), d, *lazy))
+ 	case "filter":
+ 		fs := flag.NewFlagSet("filter", flag.ExitOnError)
+-		where := fs.String("where", "", "condition such as 'age>30' (=, !=, >, <, >=, <=)")
++		where := fs.String("where", "", "condition such as 'age>30' (=, !=, >, <, >=, <=, ~ for contains)")
+ 		delim := delimFlag(fs)
+ 		lazy := lazyFlag(fs)
+ 		format := formatFlag(fs, false)

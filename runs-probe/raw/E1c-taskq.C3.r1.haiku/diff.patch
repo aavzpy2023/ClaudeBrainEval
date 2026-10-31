@@ -1,0 +1,51 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..352f8ef 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -29,7 +29,13 @@ def main(argv=None):
+         help="0 is most urgent, like nice values (default: %(default)s)",
+     )
+     ls = sub.add_parser("list", help="list tasks")
+-    ls.add_argument("--json", action="store_true", help="print JSON")
++    ls_format = ls.add_mutually_exclusive_group()
++    ls_format.add_argument("--json", action="store_true", help="print JSON")
++    ls_format.add_argument(
++        "--legacy",
++        action="store_true",
++        help="print the pre-priority format: id<TAB>payload",
++    )
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -74,6 +80,9 @@ def main(argv=None):
+                 ]
+             }
+         )
++    elif args.legacy:
++        for task_id, _priority, payload in repo.list_tasks():
++            print(f"{task_id}\t{payload}")
+     else:
+         for task_id, priority, payload in repo.list_tasks():
+             print(f"{task_id}\t{priority}\t{payload}")
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..9faf7ea 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -85,6 +85,17 @@ class CliTest(unittest.TestCase):
+             {"v": 1, "tasks": [{"id": 1, "priority": 5, "text": "hello"}]},
+         )
+ 
++    def test_list_legacy_omits_priority(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "--priority", "0", "urgent"])
++                    cli.main(["add", "later"])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--legacy"])
++        self.assertEqual(out.getvalue(), "1\turgent\n2\tlater\n")
++
+     def test_list_json_empty(self):
+         with tempfile.TemporaryDirectory() as d:
+             with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):

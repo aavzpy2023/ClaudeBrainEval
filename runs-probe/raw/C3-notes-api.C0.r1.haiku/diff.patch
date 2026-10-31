@@ -1,0 +1,102 @@
+diff --git a/src/server.ts b/src/server.ts
+index 3a71474..a7d04c7 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -2,7 +2,7 @@ import { createServer as createHttpServer } from 'node:http';
+ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+ import { createStore } from './store.ts';
+ import type { NoteInput, NoteStore } from './store.ts';
+-import { validateNoteInput, validateNotePatch } from './validation.ts';
++import { validateLimit, validateNoteInput, validateNotePatch } from './validation.ts';
+ 
+ function sendJson(res: ServerResponse, status: number, payload: unknown): void {
+   const data = JSON.stringify(payload);
+@@ -41,11 +41,18 @@ async function readNoteInput(
+ 
+ export function createServer(store: NoteStore = createStore()): Server {
+   return createHttpServer(async (req, res) => {
+-    const { pathname } = new URL(req.url ?? '/', 'http://localhost');
++    const { pathname, searchParams } = new URL(req.url ?? '/', 'http://localhost');
+ 
+     if (pathname === '/notes') {
+       if (req.method === 'GET') {
+-        return sendJson(res, 200, store.list());
++        const notes = store.list();
++        const raw = searchParams.get('limit');
++        if (raw === null) return sendJson(res, 200, notes);
++        const limit = validateLimit(raw);
++        if (!limit.ok) {
++          return sendJson(res, 422, { error: { code: 'validation_failed', message: limit.message } });
++        }
++        return sendJson(res, 200, notes.slice(0, limit.value));
+       }
+ 
+       if (req.method === 'POST') {
+diff --git a/src/validation.ts b/src/validation.ts
+index b622ad8..3917f1d 100644
+--- a/src/validation.ts
++++ b/src/validation.ts
+@@ -25,6 +25,23 @@ export function validateNoteInput(input: unknown): ValidationResult {
+   return { ok: true, value: { title, body } };
+ }
+ 
++export const MIN_LIMIT = 1;
++export const MAX_LIMIT = 100;
++
++export type LimitValidationResult = { ok: true; value: number } | { ok: false; message: string };
++
++// Digits only: rejects '', '1.5', '1e2', '+5' and ' 5', which Number() would otherwise accept.
++export function validateLimit(raw: string): LimitValidationResult {
++  if (!/^\d+$/.test(raw)) {
++    return { ok: false, message: `limit must be an integer from ${MIN_LIMIT} to ${MAX_LIMIT}` };
++  }
++  const value = Number(raw);
++  if (value < MIN_LIMIT || value > MAX_LIMIT) {
++    return { ok: false, message: `limit must be an integer from ${MIN_LIMIT} to ${MAX_LIMIT}` };
++  }
++  return { ok: true, value };
++}
++
+ export type PatchValidationResult =
+   | { ok: true; value: Partial<NoteInput> }
+   | { ok: false; message: string };
+diff --git a/test/notes.test.ts b/test/notes.test.ts
+index 3308e9c..c2fd6ac 100644
+--- a/test/notes.test.ts
++++ b/test/notes.test.ts
+@@ -51,6 +51,35 @@ describe('notes API', () => {
+     assert.ok(list.some((n) => n.id === created.id));
+   });
+ 
++  it('GET /notes?limit=n returns the n newest notes', async () => {
++    const first = await create();
++    const second = await create();
++    const all = (await (await fetch(`${baseUrl}/notes`)).json()) as Note[];
++    const limited = (await (await fetch(`${baseUrl}/notes?limit=2`)).json()) as Note[];
++    assert.deepEqual(limited, all.slice(0, 2));
++    const newest = (await (await fetch(`${baseUrl}/notes?limit=1`)).json()) as Note[];
++    assert.equal(newest.length, 1);
++    assert.equal(newest[0].id, second.id);
++    assert.ok(first.id !== second.id);
++  });
++
++  it('GET /notes?limit accepts 1 and 100', async () => {
++    assert.equal(((await (await fetch(`${baseUrl}/notes?limit=1`)).json()) as Note[]).length, 1);
++    const res = await fetch(`${baseUrl}/notes?limit=100`);
++    assert.equal(res.status, 200);
++    assert.ok(((await res.json()) as Note[]).length <= 100);
++  });
++
++  it('GET /notes?limit returns 422 for anything other than an integer from 1 to 100', async () => {
++    for (const limit of ['0', '101', '-1', '1.5', '1e2', '', 'abc', '+5', ' 5']) {
++      const res = await fetch(`${baseUrl}/notes?limit=${encodeURIComponent(limit)}`);
++      assert.equal(res.status, 422, `limit=${JSON.stringify(limit)}`);
++      const json = (await res.json()) as { error: { code: string; message: string } };
++      assert.equal(json.error.code, 'validation_failed');
++      assert.equal(typeof json.error.message, 'string');
++    }
++  });
++
+   it('POST /notes rejects invalid JSON', async () => {
+     assert.equal((await post('{nope')).status, 400);
+   });

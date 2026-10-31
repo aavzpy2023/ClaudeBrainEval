@@ -87,8 +87,23 @@ test files copied in after the run, the command that runs them, and the referenc
 under `bench/oracles/<task id>/`). Category D tasks run on the `drift` branch of each subject project:
 three commits made after the frozen digests that change a constant the digest states (shipped in the
 same bundle as `main`). E1 entries carry an `evidence` note saying where the fact lives in the archive
-and what the final digest lacks. Counts: 45 tasks, 10 flagged for the pilot (2 per category), 15 for the
-Opus subset (3 per category). Planned runs: pilot 360, main phase 2835.
+and what the final digest lacks. Counts: 51 tasks, 10 flagged for the pilot (2 per category), 15 for the
+Opus subset (3 per category). Planned runs: pilot 360, main phase 3195 (Haiku and Sonnet low).
+
+The pilot showed a ceiling on code tasks: 17 of 18 passed at C0 with Haiku, so test pass rate could not
+separate conditions. Six history-dependent code tasks were added (`D4-*`, `E1c-*`, one pair per project; not in
+the pilot or Opus subsets). `D4-*` runs on the `drift` branch and asks for something whose correct value
+(default priority, title limit, missing-column exit code) the digest states wrongly. `E1c-*` needs a
+fact present in the archived history and absent from the digest (the old list format, the first
+`createdAt` format, the streaming decision). The exploratory probes that led to this are kept in
+`runs-probe/` (Haiku, C0, one run per task); they are not part of the experiment.
+A second probe of the six new tasks (Haiku, C0 and C3) also passed 12 of 12, so the ceiling on code
+tasks stays. Decision: for code tasks (B, C, D4, E1c) H2 is tested only as non-inferiority of the test pass
+rate against C0 (margin 5 pp), and the cost is the outcome of interest there; quality is discriminated on the
+question tasks (A, D, E), scored by judges.
+
+Pilot data live in `runs-pilot/` (same layout as `runs/`) and are never reused in the main phase:
+the main ledger `runs/` starts empty and the pilot rows are not counted as repetitions.
 
 ## 6. Runs, metrics, analysis
 
@@ -114,6 +129,9 @@ to save subscription quota (arm disabled in `bench/matrix.json`); those rows are
   date) and applied to the four token components; `cost_usd_est` in `results.csv` is the CLI's own estimate
   at run time and is provisional. Cost is reported as a weighted figure with the four components always
   shown, never as a plain sum of input tokens.
+  Token counts depend on the model (its own tokenizer, prices and number of turns): models are never compared
+  on raw totals. The effect of the memory system is the change relative to the same model's C0, and model
+  dependence is tested with the condition x model interaction.
 - Quality: 0-2 rubric (A, D) by two blind judges; test pass rate (B, C).
 - Joint: cost per correct answer.
 - Retrieval behaviour (C4): whether the model searched the archive, how often, and whether it did so

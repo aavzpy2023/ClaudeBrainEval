@@ -1,0 +1,62 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..94442a1 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -1,5 +1,6 @@
+ import { randomUUID } from 'node:crypto';
+-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
++import { existsSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
++import { basename, dirname, join } from 'node:path';
+ 
+ export type Note = {
+   id: string;
+@@ -29,6 +30,17 @@ function load(file: string): StoredNote[] {
+   return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
+ }
+ 
++// A crash between writeFileSync and renameSync leaves `<file>.<pid>.tmp` behind. Remove those at startup.
++// Only names of the form `<file>.<something>.tmp` match, so the data file itself is never touched.
++function removeStaleTempFiles(file: string): void {
++  const prefix = `${basename(file)}.`;
++  for (const name of readdirSync(dirname(file))) {
++    if (name.startsWith(prefix) && name.endsWith('.tmp') && name.length > prefix.length + '.tmp'.length) {
++      rmSync(join(dirname(file), name), { force: true });
++    }
++  }
++}
++
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+ function save(file: string, notes: Map<string, StoredNote>): void {
+   const tmp = `${file}.${process.pid}.tmp`;
+@@ -39,6 +51,7 @@ function save(file: string, notes: Map<string, StoredNote>): void {
+ export function createStore(now: () => Date = () => new Date(), file?: string): NoteStore {
+   // createdAt is kept as epoch milliseconds (UTC) and only formatted as ISO-8601 on the way out.
+   // Map order is insertion order, which the file preserves (array order).
++  if (file) removeStaleTempFiles(file);
+   const notes = new Map<string, StoredNote>(file ? load(file).map((n) => [n.id, n]) : []);
+   const persist = () => {
+     if (file) save(file, notes);
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..2266c34 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -37,6 +37,19 @@ describe('note store persistence', () => {
+     assert.deepEqual(readdirSync(dir).filter((f) => f.startsWith('clean.json')), ['clean.json']);
+   });
+ 
++  it('removes stale temp files of its own file at startup and nothing else', () => {
++    const file = fileIn('crash.json');
++    const stale = fileIn('crash.json.4242.tmp');
++    const unrelated = [fileIn('other.json.4242.tmp'), fileIn('crash.json.bak'), fileIn('crash.jsonx.1.tmp')];
++    writeFileSync(file, JSON.stringify([{ id: 'k', title: 't', body: 'b', createdAt: 0 }]));
++    for (const f of [stale, ...unrelated]) writeFileSync(f, 'partial');
++
++    assert.equal(createStore(undefined, file).get('k')?.title, 't');
++    assert.equal(readdirSync(dir).includes('crash.json.4242.tmp'), false);
++    for (const f of unrelated) assert.equal(readdirSync(dir).includes(f.slice(dir.length + 1)), true);
++    assert.equal(readdirSync(dir).includes('crash.json'), true);
++  });
++
+   it('loads an existing file at startup', () => {
+     const file = fileIn('seed.json');
+     writeFileSync(file, JSON.stringify([{ id: 'x', title: 't', body: 'b', createdAt: 0 }]));

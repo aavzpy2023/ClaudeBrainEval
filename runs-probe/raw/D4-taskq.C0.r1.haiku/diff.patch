@@ -1,0 +1,75 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..02d398f 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -20,13 +20,19 @@ def main(argv=None):
+     sub = parser.add_subparsers(dest="command", required=True)
+     add = sub.add_parser("add", help="enqueue a task")
+     add.add_argument("text")
+-    add.add_argument(
++    urgency = add.add_mutually_exclusive_group()
++    urgency.add_argument(
+         "--priority",
+         type=int,
+         choices=range(repository.MIN_PRIORITY, repository.MAX_PRIORITY + 1),
+         metavar="0-9",
+-        default=repository.DEFAULT_PRIORITY,
+-        help="0 is most urgent, like nice values (default: %(default)s)",
++        help="0 is most urgent, like nice values (default: %(default)s)"
++        % {"default": repository.DEFAULT_PRIORITY},
++    )
++    urgency.add_argument(
++        "--urgent",
++        action="store_true",
++        help="one step more urgent than the default priority",
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
+@@ -41,7 +47,13 @@ def main(argv=None):
+ 
+     repo = Repository()
+     if args.command == "add":
+-        print(repo.enqueue(args.text, priority=args.priority))
++        if args.urgent:
++            priority = max(repository.MIN_PRIORITY, repository.DEFAULT_PRIORITY - 1)
++        elif args.priority is not None:
++            priority = args.priority
++        else:
++            priority = repository.DEFAULT_PRIORITY
++        print(repo.enqueue(args.text, priority=priority))
+     elif args.command == "claim":
+         task = repo.claim()
+         if args.json:
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index 5a005cc..0bf52b2 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -30,6 +30,28 @@ class CliTest(unittest.TestCase):
+                     cli.main(["list"])
+         self.assertEqual(out.getvalue(), "1\t0\turgent\n")
+ 
++    def test_add_urgent(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "--urgent", "urgent"])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list"])
++        self.assertEqual(out.getvalue(), "1\t2\turgent\n")
++
++    def test_add_urgent_with_priority_is_usage_error(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stderr(io.StringIO()):
++                    with self.assertRaises(SystemExit) as cm:
++                        cli.main(["add", "--urgent", "--priority", "0", "x"])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list"])
++        self.assertEqual(cm.exception.code, 2)
++        self.assertEqual(out.getvalue(), "")
++
+     def test_add_rejects_out_of_range_priority(self):
+         with contextlib.redirect_stderr(io.StringIO()):
+             with self.assertRaises(SystemExit):

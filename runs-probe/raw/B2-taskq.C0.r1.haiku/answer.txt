@@ -1,0 +1,8 @@
+I added `requeue <id>`. It makes a dead task pending again with its attempt count reset to 0, so it gets the full retry budget. The full suite passes: 30 tests, including 5 new ones.
+
+- **Repository** (`taskq/repository.py`): a new `Repository.requeue(task_id)` runs in a `BEGIN IMMEDIATE` transaction, like `fail()`. It returns `True` when it requeues, `False` if the task exists but isn't dead, and `None` if the task is unknown.
+- **CLI** (`taskq/cli.py`): on success it prints nothing and exits 0. Otherwise it writes `no such task: <id>` or `task <id> is not dead` to stderr and exits 1.
+- **TODO comment**: I narrowed the comment above `list_dead` so it only forbids purge now. Requeue is decided, and purge is still open.
+- **Tests**: `tests/test_repository.py` covers a requeued task's fresh budget, a non-dead task, and an unknown id. `tests/test_cli.py` covers the requeue-then-claim path and both error messages with exit code 1.
+
+Nothing is committed. I'd also suggest a note in the README or help text that requeue resets the attempt count, if the team wants that visible to users.

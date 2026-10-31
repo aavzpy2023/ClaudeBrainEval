@@ -1,0 +1,49 @@
+diff --git a/src/server.ts b/src/server.ts
+index 3a71474..5a5729d 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -41,11 +41,18 @@ async function readNoteInput(
+ 
+ export function createServer(store: NoteStore = createStore()): Server {
+   return createHttpServer(async (req, res) => {
+-    const { pathname } = new URL(req.url ?? '/', 'http://localhost');
++    const { pathname, searchParams } = new URL(req.url ?? '/', 'http://localhost');
+ 
+     if (pathname === '/notes') {
+       if (req.method === 'GET') {
+-        return sendJson(res, 200, store.list());
++        const q = searchParams.get('q');
++        if (q === null) return sendJson(res, 200, store.list());
++        // Case-insensitive substring match on title or body; list() already returns newest first.
++        const needle = q.toLowerCase();
++        const matches = store
++          .list()
++          .filter((n) => n.title.toLowerCase().includes(needle) || n.body.toLowerCase().includes(needle));
++        return sendJson(res, 200, matches);
+       }
+ 
+       if (req.method === 'POST') {
+diff --git a/test/notes.test.ts b/test/notes.test.ts
+index 3308e9c..3b346a7 100644
+--- a/test/notes.test.ts
++++ b/test/notes.test.ts
+@@ -35,6 +35,19 @@ describe('notes API', () => {
+     assert.deepEqual(await res.json(), []);
+   });
+ 
++  it('GET /notes?q= filters by title or body, case-insensitively, newest first', async () => {
++    const older = (await (await post(JSON.stringify({ title: 'Groceries', body: 'milk' }))).json()) as Note;
++    const newer = (await (await post(JSON.stringify({ title: 'Plans', body: 'buy MILK later' }))).json()) as Note;
++    const unrelated = (await (await post(JSON.stringify({ title: 'Other', body: 'nothing' }))).json()) as Note;
++    const list = (await (await fetch(`${baseUrl}/notes?q=milk`)).json()) as Note[];
++    const ids = list.map((n) => n.id);
++    assert.ok(ids.includes(older.id) && ids.includes(newer.id));
++    assert.ok(!ids.includes(unrelated.id));
++    assert.ok(ids.indexOf(newer.id) < ids.indexOf(older.id));
++    const byTitle = (await (await fetch(`${baseUrl}/notes?q=GROCER`)).json()) as Note[];
++    assert.ok(byTitle.some((n) => n.id === older.id));
++  });
++
+   it('POST /notes creates a note with a UUID id', async () => {
+     const res = await post(JSON.stringify({ title: 'Hello', body: 'World' }));
+     assert.equal(res.status, 201);

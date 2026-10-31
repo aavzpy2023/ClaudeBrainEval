@@ -1,0 +1,7 @@
+`GET /limits` is in place. It returns 200 with `{"titleMax": 200, "bodyMax": 10000}`, read from the same constants the note validation uses, so the endpoint can't drift from the real limits. Other methods on `/limits` get 405 with `Allow: GET`. The full suite passes (30 tests, including two new ones for this endpoint).
+
+Changes:
+- **`src/server.ts`**: a `/limits` branch placed before the `/notes` handling, following the same pattern as that route.
+- **`test/limits.test.ts`**: new file. It checks the 200 body and that POST, PUT, PATCH and DELETE each get a 405 with `Allow: GET`.
+
+I haven't committed. I also didn't run a TypeScript type check, because the shell call that would have run it was blocked before it executed.

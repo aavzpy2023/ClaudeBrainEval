@@ -1,0 +1,139 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..61c035f 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -37,6 +37,8 @@ def main(argv=None):
+     fail = sub.add_parser("fail", help="record a failure and retry with backoff")
+     fail.add_argument("id", type=int)
+     sub.add_parser("dead", help="list dead tasks")
++    requeue = sub.add_parser("requeue", help="put a dead task back in the queue")
++    requeue.add_argument("id", type=int)
+     args = parser.parse_args(argv)
+ 
+     repo = Repository()
+@@ -65,6 +67,14 @@ def main(argv=None):
+     elif args.command == "dead":
+         for task_id, payload in repo.list_dead():
+             print(f"{task_id}\t{payload}")
++    elif args.command == "requeue":
++        result = repo.requeue(args.id)
++        if result is None:
++            print(f"no such task: {args.id}", file=sys.stderr)
++            return 1
++        if not result:
++            print(f"task {args.id} is not dead", file=sys.stderr)
++            return 1
+     elif args.json:
+         _print_json(
+             {
+diff --git a/taskq/repository.py b/taskq/repository.py
+index 8247752..4334aa7 100644
+--- a/taskq/repository.py
++++ b/taskq/repository.py
+@@ -105,7 +105,7 @@ class Repository:
+ 
+     # TODO(open question): dead-task purge policy is undecided -- keep forever
+     # vs. expire after N days. Nobody owns this decision yet. Until it is made,
+-    # dead tasks are only listable; do NOT add purge or requeue here.
++    # do NOT add purge here.
+     def list_dead(self):
+         """Return dead tasks as (id, payload) tuples in insertion order."""
+         conn = self._connect()
+@@ -117,6 +117,33 @@ class Repository:
+             conn.close()
+ 
+ 
++    def requeue(self, task_id):
++        """Put a dead task back in the queue with a fresh attempt budget.
++
++        Return True if requeued, False if the task exists but is not dead, and
++        None if no such task exists.
++        """
++        conn = self._connect()
++        try:
++            with conn:
++                conn.execute("BEGIN IMMEDIATE")
++                row = conn.execute(
++                    "SELECT status FROM tasks WHERE id = ?", (task_id,)
++                ).fetchone()
++                if row is None:
++                    return None
++                if row[0] != "dead":
++                    return False
++                conn.execute(
++                    "UPDATE tasks SET status = 'pending', attempts = 0, not_before = NULL "
++                    "WHERE id = ?",
++                    (task_id,),
++                )
++                return True
++        finally:
++            conn.close()
++
++
+     def claim(self, now=None):
+         """Claim the next claimable task and return (id, payload), or None.
+ 
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..078d31b 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -72,6 +72,33 @@ class CliTest(unittest.TestCase):
+                     self.assertEqual(cli.main(["dead"]), 0)
+         self.assertEqual(out.getvalue(), "1\tdoomed\n")
+ 
++    def test_requeue_dead_task(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "doomed"])
++                    for _ in range(3):
++                        cli.main(["fail", "1"])
++                with contextlib.redirect_stdout(io.StringIO()):
++                    self.assertEqual(cli.main(["requeue", "1"]), 0)
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    self.assertEqual(cli.main(["claim"]), 0)
++        self.assertEqual(out.getvalue(), "1\tdoomed\n")
++
++    def test_requeue_rejects_unknown_or_live_task(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "fine"])
++                err = io.StringIO()
++                with contextlib.redirect_stderr(err):
++                    self.assertEqual(cli.main(["requeue", "1"]), 1)
++                    self.assertEqual(cli.main(["requeue", "9"]), 1)
++        self.assertEqual(
++            err.getvalue(), "task 1 is not dead\nno such task: 9\n"
++        )
++
+     def test_list_json(self):
+         with tempfile.TemporaryDirectory() as d:
+             with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
+diff --git a/tests/test_repository.py b/tests/test_repository.py
+index 41b33ea..d11bab7 100644
+--- a/tests/test_repository.py
++++ b/tests/test_repository.py
+@@ -128,6 +128,21 @@ class RepositoryTest(unittest.TestCase):
+     def test_fail_unknown_task(self):
+         self.assertIsNone(self.repo.fail(99, ))
+ 
++    def test_requeue_dead_task_gets_fresh_attempt_budget(self):
++        self.repo.enqueue("a", )
++        for _ in range(repository.MAX_ATTEMPTS):
++            self.repo.fail(1, now=0)
++        self.assertTrue(self.repo.requeue(1, ))
++        self.assertEqual(self.repo.claim(now=0), (1, "a"))
++        self.assertEqual(self.repo.fail(1, now=0), "pending")
++
++    def test_requeue_not_dead_task(self):
++        self.repo.enqueue("a", )
++        self.assertFalse(self.repo.requeue(1, ))
++
++    def test_requeue_unknown_task(self):
++        self.assertIsNone(self.repo.requeue(99, ))
++
+     def test_default_path_uses_env_override_then_home(self):
+         with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(self.dir.name, "sub", "e.db")}):
+             self.assertEqual(Repository().db_path, os.path.join(self.dir.name, "sub", "e.db"))

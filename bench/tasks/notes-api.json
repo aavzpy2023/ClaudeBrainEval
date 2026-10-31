@@ -297,5 +297,53 @@
     },
     "pilot": false,
     "opus": false
+  },
+  {
+    "id": "D4-notes-api",
+    "project": "notes-api",
+    "category": "D",
+    "base": "drift",
+    "kind": "code",
+    "prompt": "Add a `GET /limits` endpoint that answers 200 with the maximum title and body lengths the API currently accepts, as `{\"titleMax\": ..., \"bodyMax\": ...}`. Other methods on that path answer 405.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/D4-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/D4-notes-api/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E1c-notes-api",
+    "project": "notes-api",
+    "category": "E",
+    "subtype": "E1",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Notes files written by the very first iterations of the API, before the timestamp format was changed, must still load. Make `createStore` read such a file: convert their timestamps to the current representation without changing the instant they meant. New writes use the current representation only.",
+    "oracle": {
+      "files": {
+        "test/oracle.test.ts": "bench/oracles/E1c-notes-api/oracle.test.ts"
+      },
+      "cmd": [
+        "node",
+        "--test",
+        "test/oracle.test.ts"
+      ],
+      "solution": "bench/oracles/E1c-notes-api/solution.patch"
+    },
+    "evidence": {
+      "in_transcript": "sessions 3 and 4 (first createdAt format and why it was replaced); also visible in git history",
+      "digest_gap": "final digest states only the current epoch-ms format",
+      "verified": "checked: fact present in the archived transcript and absent from the final digest"
+    },
+    "pilot": false,
+    "opus": false
   }
 ]

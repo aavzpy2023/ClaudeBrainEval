@@ -1,0 +1,12 @@
+▶ oracle: stale temp files from a crashed write
+  ✔ removes <file>.<pid>.tmp leftovers at startup and keeps the data (2.76988ms)
+  ✔ works when there is nothing to clean (0.708413ms)
+✔ oracle: stale temp files from a crashed write (5.458199ms)
+ℹ tests 2
+ℹ suites 1
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 144.890323

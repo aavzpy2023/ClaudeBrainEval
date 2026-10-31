@@ -1,0 +1,9 @@
+When a file-backed store is created, it now removes leftover `<file>.<something>.tmp` files from the same directory. The full suite passes (29/29), including a new test.
+
+**Changes**
+- `src/store.ts`: a new `removeStaleTempFiles` runs at the start of `createStore` when a file is given. It deletes entries whose names start with `<basename>.`, end in `.tmp`, and have a non-empty middle part. The data file, `<file>.bak`, and names like `crash.jsonx.1.tmp` are not matched.
+- `test/persistence.test.ts`: a new test creates a stale `crash.json.4242.tmp` plus several unrelated files. It checks that only the stale temp file is removed and the data file and the unrelated files remain.
+
+Nothing is committed yet. Tell me if you want a commit.
+
+**Caveat:** the cleanup runs at startup, so it cannot tell a crash leftover from a temp file that another live process is about to rename. That is the same multi-process problem the existing TODO in `src/store.ts` describes. Running two processes against one `NOTES_FILE` could still lose data or break a rename, and this change does not address that.

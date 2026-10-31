@@ -1,0 +1,9 @@
+I added `--urgent` to `taskq add`. It enqueues at priority 2, one step more urgent than the default of 3. The full suite passes (27 tests, including two new ones).
+
+Combining `--urgent` with `--priority` exits with status 2 and enqueues nothing. I made the two flags a mutually exclusive argparse group, so argparse does the rejection and prints its usual usage error.
+
+Changes are in `taskq/cli.py` and `tests/test_cli.py`. I left them uncommitted on `drift`.
+
+Two choices to check:
+- The step is computed as `max(MIN_PRIORITY, DEFAULT_PRIORITY - 1)`. The clamp only matters if the default ever drops to 0, where `--urgent` would otherwise produce an out-of-range value.
+- `--priority` now defaults to `None`, so the CLI can tell whether it was passed explicitly. The help text still shows the default 3 through a manual `%` substitution.

@@ -1,0 +1,7 @@
+I added `taskq count`. It prints the total number of tasks across all statuses as one number on its own line. The full suite passes (28 tests, including 3 new ones). I didn't commit.
+
+- **`taskq/repository.py`**: a new `Repository.count()` runs `SELECT COUNT(*) FROM tasks` with no status filter. The CLI only talks to `Repository`, so the SQL stays there.
+- **`taskq/cli.py`**: a `count` subcommand that prints the result. I put its branch before the `args.json` fallback, since `count` has no `--json` flag.
+- **Tests**: `test_count` in `tests/test_repository.py`, plus `test_count_includes_every_status` and `test_count_empty` in `tests/test_cli.py`. The status test covers pending, done, and dead tasks.
+
+I didn't run the command by hand against a real database, because the shell approval for that call was refused. The CLI test exercises the same path through `cli.main(["count"])`.

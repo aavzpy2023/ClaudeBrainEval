@@ -1,0 +1,7 @@
+`taskq add` now rejects blank text. An empty string, spaces, or tabs/newlines exit with status 2, print an error on stderr, and enqueue nothing.
+
+The change is in `taskq/cli.py`. After argument parsing, if the command is `add` and `text.strip()` is empty, it calls `parser.error(...)`. That is the same path argparse uses for other usage errors, so the exit code and stderr output match them. The check runs before `Repository()` is created, so the database is never touched.
+
+I added `test_add_rejects_blank_text` to `tests/test_cli.py`. It covers `""`, `"   "` and `"\t\n"`, asserts exit code 2 and the error text on stderr, and checks that `list` is empty afterwards. The full suite passes (26 tests).
+
+I did not run the command-line form (`python -m taskq add "  "`) by hand because the shell tool required approval for it. The unit test exercises the same code path. I also haven't committed anything.

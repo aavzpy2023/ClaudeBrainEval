@@ -1,0 +1,7 @@
+`GET /notes` now accepts `?limit=n`. It returns the n newest notes, and anything other than an integer from 1 to 100 gets a 422 with the same `validation_failed` shape as invalid content. All 31 tests pass, including three new ones. I haven't committed anything.
+
+- **`src/validation.ts`**: new `validateLimit`. It accepts digits only, so `1.5`, `1e2`, `+5`, ` 5` and an empty value are all rejected, not just out-of-range numbers.
+- **`src/server.ts`**: the GET branch reads `limit` from the query string. Without it, the response is unchanged.
+- **`test/notes.test.ts`**: covers the newest-first slice, the boundaries 1 and 100, and the 422 cases.
+
+I chose to ignore a repeated `?limit=` (`?limit=1&limit=2`) and use the first value. Say if you'd rather reject repeats with a 422.

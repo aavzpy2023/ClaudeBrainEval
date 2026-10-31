@@ -1,0 +1,104 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..b23a8f5 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -275,3 +275,53 @@ func Select(r io.Reader, w io.Writer, cols []string, delim rune, lazy bool) erro
+ 	cw.Flush()
+ 	return cw.Error()
+ }
++
++// Tail writes the header and the last n data rows of r to w. It keeps at most n rows in memory.
++func Tail(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
++	if n < 0 {
++		return fmt.Errorf("n must be >= 0, got %d", n)
++	}
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	cw := csv.NewWriter(w)
++	cw.Comma = delim
++	header, err := cr.Read()
++	if err == io.EOF {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	if err := cw.Write(header); err != nil {
++		return err
++	}
++	ring := make([][]string, n)
++	count := 0
++	for {
++		rec, err := cr.Read()
++		if err == io.EOF {
++			break
++		}
++		if err != nil {
++			cw.Flush()
++			return err
++		}
++		if n > 0 {
++			ring[count%n] = append([]string(nil), rec...)
++		}
++		count++
++	}
++	kept := count
++	if kept > n {
++		kept = n
++	}
++	for i := count - kept; i < count; i++ {
++		if err := cw.Write(ring[i%n]); err != nil {
++			return err
++		}
++	}
++	cw.Flush()
++	return cw.Error()
++}
+diff --git a/main.go b/main.go
+index 3c02ac8..f3faaff 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool tail [-n N] <file>\n       csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,6 +128,19 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "tail":
++		fs := flag.NewFlagSet("tail", flag.ExitOnError)
++		n := fs.Int("n", 10, "number of rows to print from the end")
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		fs.Parse(os.Args[2:])
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runTail(fs.Arg(0), *n, d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+@@ -192,3 +205,12 @@ func runFilter(path string, c Condition, delim rune, lazy bool) error {
+ 	defer f.Close()
+ 	return Filter(f, os.Stdout, c, delim, lazy)
+ }
++
++func runTail(path string, n int, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Tail(f, os.Stdout, n, delim, lazy)
++}

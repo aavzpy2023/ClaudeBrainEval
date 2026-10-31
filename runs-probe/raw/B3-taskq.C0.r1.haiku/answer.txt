@@ -1,0 +1,13 @@
+`done` now succeeds only for a task whose status is `running`. Every other case returns False, and the CLI prints `not running: <id>` to stderr and exits 1. All 29 tests pass, including the existing ones, which I did not change.
+
+Changes:
+- **`taskq/repository.py`**: the `done` UPDATE adds `AND status = 'running'`, and the docstring explains why.
+- **`taskq/cli.py`**: the error message changed from `no such task: <id>` to `not running: <id>`.
+- **Tests added**:
+  - `test_done_rejects_pending_task` and `test_done_twice_is_rejected_the_second_time` in `tests/test_repository.py`.
+  - `test_late_done_after_lease_reclaim_is_not_applied_to_dead_task` in `tests/test_repository.py`, which covers a task that went dead and then gets a late `done`.
+  - `test_done_not_running_prints_error_and_fails` in `tests/test_cli.py`, which checks the message and exit code.
+
+**Gap to decide on:** the rule you specified is status-based. A late `done` that arrives after the lease expired but before another worker reclaims the task still sees status `running`, so it still succeeds. Closing that window would also require `lease_expires > now`, which means passing a clock into `done`. I left that out because you specified the status rule, but tell me if you want it.
+
+I haven't committed anything.

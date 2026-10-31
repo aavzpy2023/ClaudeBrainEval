@@ -1,0 +1,5 @@
+`GET /limits` is in place. It returns 200 with `{"titleMax": 200, "bodyMax": 10000}`, and other methods on that path get 405 with `Allow: GET`. `node --test` passes, 30 of 30, including two new tests.
+
+The values come from the `MAX_TITLE_LENGTH` and `MAX_BODY_LENGTH` constants in `src/validation.ts`, so the endpoint can't drift from what validation enforces. The title limit is 200, not the 120 in the session digest; commit `4e0cdeb` raised it, and the code is authoritative.
+
+Changes are in `src/server.ts` and `test/notes.test.ts`. I haven't committed, since you didn't ask for one.

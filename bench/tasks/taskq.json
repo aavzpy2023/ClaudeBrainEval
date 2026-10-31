@@ -302,5 +302,55 @@
     },
     "pilot": true,
     "opus": false
+  },
+  {
+    "id": "D4-taskq",
+    "project": "taskq",
+    "category": "D",
+    "base": "drift",
+    "kind": "code",
+    "prompt": "Add an `--urgent` flag to `taskq add`: it enqueues the task with a priority one step more urgent than the default priority. Combining `--urgent` with `--priority` is a usage error (exit status 2) and nothing is enqueued.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/D4-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/D4-taskq/solution.patch"
+    },
+    "pilot": false,
+    "opus": false
+  },
+  {
+    "id": "E1c-taskq",
+    "project": "taskq",
+    "category": "E",
+    "subtype": "E1",
+    "base": "main",
+    "kind": "code",
+    "prompt": "Some old scripts still parse the plain `taskq list` output from before priorities existed. Add `taskq list --legacy`, which prints exactly that old format. The normal `list` output must not change.",
+    "oracle": {
+      "files": {
+        "tests/test_oracle.py": "bench/oracles/E1c-taskq/test_oracle.py"
+      },
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_oracle"
+      ],
+      "solution": "bench/oracles/E1c-taskq/solution.patch"
+    },
+    "evidence": {
+      "in_transcript": "session 3 final answer: 'anything that parses the old two-column output will need updating'; the old format is also visible in git history",
+      "digest_gap": "final digest never says what the list output was before priorities",
+      "verified": "checked by reading the transcript and the final digest"
+    },
+    "pilot": false,
+    "opus": false
   }
 ]

@@ -1,0 +1,194 @@
+diff --git a/distinct.go b/distinct.go
+new file mode 100644
+index 0000000..86eed98
+--- /dev/null
++++ b/distinct.go
+@@ -0,0 +1,59 @@
++package main
++
++import (
++	"bufio"
++	"encoding/csv"
++	"fmt"
++	"io"
++)
++
++// Distinct streams the CSV in r and writes each distinct value of column col
++// to w, one per line, in order of first appearance. An empty cell is a value
++// like any other. Values are written as-is, without CSV quoting.
++func Distinct(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	cr.ReuseRecord = true
++	header, err := cr.Read()
++	if err == io.EOF {
++		return fmt.Errorf("%w: %q (empty input)", ErrMissingColumn, col)
++	}
++	if err != nil {
++		return err
++	}
++	idx := -1
++	for j, h := range header {
++		if h == col {
++			idx = j
++			break
++		}
++	}
++	if idx < 0 {
++		return fmt.Errorf("%w: %q", ErrMissingColumn, col)
++	}
++	bw := bufio.NewWriter(w)
++	seen := make(map[string]bool)
++	for {
++		rec, err := cr.Read()
++		if err == io.EOF {
++			break
++		}
++		if err != nil {
++			bw.Flush()
++			return err
++		}
++		v := ""
++		if idx < len(rec) {
++			v = rec[idx]
++		}
++		if seen[v] {
++			continue
++		}
++		seen[v] = true
++		bw.WriteString(v)
++		bw.WriteByte('\n')
++	}
++	return bw.Flush()
++}
+diff --git a/distinct_test.go b/distinct_test.go
+new file mode 100644
+index 0000000..d7ece5c
+--- /dev/null
++++ b/distinct_test.go
+@@ -0,0 +1,71 @@
++package main
++
++import (
++	"errors"
++	"strings"
++	"testing"
++)
++
++func distinctOf(in, col string) (string, error) {
++	var sb strings.Builder
++	err := Distinct(strings.NewReader(in), &sb, col, ',', false)
++	return sb.String(), err
++}
++
++func TestDistinctFirstAppearanceOrder(t *testing.T) {
++	got, err := distinctOf("a,b\nx,1\ny,2\nx,3\nz,4\ny,5\n", "a")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "x\ny\nz\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestDistinctEmptyCellIsAValue(t *testing.T) {
++	got, err := distinctOf("a,b\n,1\nx,2\n,3\n", "a")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "\nx\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestDistinctShortRow(t *testing.T) {
++	got, err := distinctOf("a,b\nx,1\nx\ny,2\n", "b")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "1\n\n2\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestDistinctNoRows(t *testing.T) {
++	got, err := distinctOf("a,b\n", "a")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got != "" {
++		t.Fatalf("got %q, want empty", got)
++	}
++}
++
++func TestDistinctMissingColumn(t *testing.T) {
++	for _, in := range []string{"a,b\n1,2\n", ""} {
++		if _, err := distinctOf(in, "z"); !errors.Is(err, ErrMissingColumn) {
++			t.Fatalf("input %q: want ErrMissingColumn, got %v", in, err)
++		}
++	}
++}
++
++func TestDistinctDelim(t *testing.T) {
++	var sb strings.Builder
++	if err := Distinct(strings.NewReader("a;b\nx;1\nx;2\ny;3\n"), &sb, "a", ';', false); err != nil {
++		t.Fatal(err)
++	}
++	if want := "x\ny\n"; sb.String() != want {
++		t.Fatalf("got %q, want %q", sb.String(), want)
++	}
++}
+diff --git a/main.go b/main.go
+index 83bcce5..e8bccf5 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n       csvtool distinct -c city <file>   (distinct values, first appearance order)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,6 +128,22 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "distinct":
++		fs := flag.NewFlagSet("distinct", flag.ExitOnError)
++		c := fs.String("c", "", "column whose distinct values to print")
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		format := formatFlag(fs, false)
++		fs.Parse(os.Args[2:])
++		_, err := format()
++		fail(err)
++		if *c == "" || fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runDistinct(fs.Arg(0), *c, d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+@@ -190,6 +206,15 @@ func runStats(path, col string, delim rune, lazy bool) error {
+ 	return Stats(f, os.Stdout, col, delim, lazy)
+ }
+ 
++func runDistinct(path, col string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Distinct(f, os.Stdout, col, delim, lazy)
++}
++
+ func runFilter(path string, c Condition, delim rune, lazy bool) error {
+ 	f, err := open(path)
+ 	if err != nil {

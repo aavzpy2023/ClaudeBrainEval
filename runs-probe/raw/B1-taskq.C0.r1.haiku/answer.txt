@@ -1,0 +1,16 @@
+`taskq dead` now takes `--json`, and the output follows the same envelope as `list --json` and `claim --json`. The full suite passes (27 tests, including two new ones).
+
+```
+$ taskq dead --json
+{"v": 1, "tasks": [{"id": 1, "text": "doomed"}]}
+```
+
+With no dead tasks it prints `{"v": 1, "tasks": []}`.
+
+Changes:
+- **`taskq/cli.py`**: added the `--json` flag to the `dead` subparser and a JSON branch in the `dead` handler. The JSON branch uses the existing `_print_json` helper, so the `v` field comes from `SCHEMA_VERSION`. The default tab-separated output is unchanged.
+- **`tests/test_cli.py`**: added `test_dead_json` (one dead task) and `test_dead_json_empty`.
+
+I used `text` for the payload key to match `list --json` and `claim --json`, rather than the `payload` name that the plain-text output uses internally.
+
+I did not commit. The purge policy for dead tasks is still open, and I left `repository.py` alone.

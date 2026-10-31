@@ -1,0 +1,11 @@
+`createStore` now reads files that still have the old `createdAt` format, and the full suite passes (29 tests, 0 failures).
+
+The old format was `'YYYY-MM-DD HH:mm'` in the server's local time, which commit `272e397` replaced. `load()` in `src/store.ts` now converts any string `createdAt` by parsing it as local time, so the stored instant is unchanged. Numeric timestamps pass through untouched. Saves only write numbers, so a legacy file is rewritten in the current format on its first write.
+
+I added a test in `test/persistence.test.ts` that loads a legacy file, checks the converted timestamp, creates a note, and confirms every `createdAt` is a number afterwards.
+
+Two things to be aware of:
+- The conversion uses the timezone of the process that loads the file. If the old files were written on a machine in a different timezone, the instants will be off by that offset. The old code had no zone information, so there is no way to recover it.
+- A local time that falls in the repeated hour of a DST fall-back is ambiguous, and the conversion picks one of the two instants. Minute precision also means notes from the same minute stay tied, as they did before.
+
+If a legacy string doesn't match the expected pattern, `load()` throws rather than guessing. I haven't committed the change.

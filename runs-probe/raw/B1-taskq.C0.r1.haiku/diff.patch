@@ -1,0 +1,65 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..d5ba09d 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -36,7 +36,8 @@ def main(argv=None):
+     done.add_argument("id", type=int)
+     fail = sub.add_parser("fail", help="record a failure and retry with backoff")
+     fail.add_argument("id", type=int)
+-    sub.add_parser("dead", help="list dead tasks")
++    dead = sub.add_parser("dead", help="list dead tasks")
++    dead.add_argument("--json", action="store_true", help="print JSON")
+     args = parser.parse_args(argv)
+ 
+     repo = Repository()
+@@ -63,8 +64,14 @@ def main(argv=None):
+             return 1
+         print(status)
+     elif args.command == "dead":
+-        for task_id, payload in repo.list_dead():
+-            print(f"{task_id}\t{payload}")
++        dead = repo.list_dead()
++        if args.json:
++            _print_json(
++                {"tasks": [{"id": i, "text": t} for i, t in dead]}
++            )
++        else:
++            for task_id, payload in dead:
++                print(f"{task_id}\t{payload}")
+     elif args.json:
+         _print_json(
+             {
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..d196d1f 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -72,6 +72,29 @@ class CliTest(unittest.TestCase):
+                     self.assertEqual(cli.main(["dead"]), 0)
+         self.assertEqual(out.getvalue(), "1\tdoomed\n")
+ 
++    def test_dead_json(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "doomed"])
++                    for _ in range(3):
++                        cli.main(["fail", "1"])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    self.assertEqual(cli.main(["dead", "--json"]), 0)
++        self.assertEqual(
++            json.loads(out.getvalue()),
++            {"v": 1, "tasks": [{"id": 1, "text": "doomed"}]},
++        )
++
++    def test_dead_json_empty(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["dead", "--json"])
++        self.assertEqual(json.loads(out.getvalue()), {"v": 1, "tasks": []})
++
+     def test_list_json(self):
+         with tempfile.TemporaryDirectory() as d:
+             with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
