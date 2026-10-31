@@ -1,0 +1,8 @@
+**Root cause:** `PATCH /notes/:id` took the parsed request body and `Object.assign`ed it straight onto the stored note. The server never checked which fields the client sent. A body like `{"id": "...", "createdAt": 0}` therefore replaced the note's `id` and `createdAt` along with any legitimate edits.
+
+**The fix:** It landed in two commits, `2da92fb` (which added PATCH) and `e9d532a` ("Fix PATCH overwriting id and createdAt; reject unknown fields with 422"). It has two parts:
+
+- **Store:** `store.patch` no longer merges the raw body. It copies only `title` and `body` onto the note, so `id` and `createdAt` can't be touched.
+- **Validation:** `validateNotePatch` in `src/validation.ts` accepts only `title` and `body`. Any other field, an empty patch, or an invalid value gets a 422 `validation_failed` response. I chose to reject rather than silently ignore unknown fields so that client bugs show up instead of being hidden.
+
+This summary comes from my project notes, not from re-reading the code or the commits just now. The notes say `node --test` passes with 28 tests, but I haven't checked that this session.

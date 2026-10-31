@@ -1,0 +1,3 @@
+`DELETE /notes/:id` answers **404** with the JSON body `{ "error": "Note not found" }` when the note doesn't exist (`src/server.ts:96`). When the note does exist, it answers 204 with no body.
+
+This means a repeated DELETE on the same id returns 404 the second time. `test/notes.test.ts:181` covers this, including an id that never existed.

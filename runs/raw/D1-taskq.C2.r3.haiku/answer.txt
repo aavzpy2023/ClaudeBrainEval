@@ -1,0 +1,5 @@
+A task added with `taskq add "x"` and no `--priority` gets priority **3**.
+
+The default is set by `DEFAULT_PRIORITY` in `taskq/repository.py`, which is now `3`. Commit `3a4a4e0` ("Lower the default priority from 5 to 3") changed it from 5. The session digest I was given still says the default is 5, so it is out of date. Lower numbers are more urgent, so new tasks now sort ahead of tasks that kept the old default of 5.
+
+Tasks that already exist keep whatever priority they were stored with.

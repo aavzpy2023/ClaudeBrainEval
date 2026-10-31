@@ -1,0 +1,16 @@
+{
+  "run_id": "B1-notes-api.C1.r2.sonnet-low",
+  "model_requested": "sonnet",
+  "effort": "low",
+  "condition": "C1",
+  "model_resolved": "claude-haiku-5-5",
+  "claude_version": "2.1.310 (Claude Code)",
+  "brain_commit": "6fd55f2",
+  "snapshot_db_sha256": "00b87977542861202ab47610dd347531a6c477beaf9bbc64a4dbf15f01452eae",
+  "snapshot_bundle_sha256": "1c6f986c6cd2581753fa3a1e126a3d3d6d06e8e8b38f5204ef7f34e639fdde03",
+  "prompt_sha256": "a194bfb2945aff704e88794d1715cd516a9295251fcd27691ab633c92191069a",
+  "tools": "Read,Write,Edit,Glob,Grep,Bash(git *),Bash(python3 *),Bash(python *),Bash(node *),Bash(go *),Bash(npm *)",
+  "started": "2026-10-31T00:35:17+00:00",
+  "exit_code": 0,
+  "status": "ok"
+}

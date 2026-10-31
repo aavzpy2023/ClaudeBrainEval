@@ -1,0 +1,11 @@
+The duplicate hand-out was fixed by opening `claim()`'s transaction with `BEGIN IMMEDIATE` before its SELECT. The fix is in commit `3b07992`.
+
+**Why it happened:** `claim()` ran its SELECT and UPDATE as separate steps, and the SELECT was not inside a transaction. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT ran with no lock held. Two workers could both SELECT the same pending row before either UPDATE took the write lock. Both then marked it `running` and returned it.
+
+**The fix:** `claim()` now runs `BEGIN IMMEDIATE` before the SELECT, so the write lock is taken first. A second worker waits until the first commits, then sees the task as `running` and skips it. The commit also adds a regression test: two threads with a hook (`_after_select_hook`) that sleeps between the SELECT and UPDATE. The test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** a lock file. The project notes say the user chose SQLite's own locking instead, so no lock file was added. I haven't found the discussion itself in the repo, so that rationale comes from the notes.
+
+Two details to know:
+- The commit touches `taskq/storage.py`. That file no longer exists. Commit `3f22710` moved the SQL into `Repository`, and the claim logic is now in `taskq/repository.py`, around line 120.
+- Separate from this race, a worker that finishes after its 60 s lease expires can still mark the task done. The notes list this as an open issue.

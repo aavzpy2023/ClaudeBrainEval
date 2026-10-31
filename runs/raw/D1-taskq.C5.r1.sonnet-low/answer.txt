@@ -1,0 +1,5 @@
+The task gets priority **3**. `DEFAULT_PRIORITY = 3` in `taskq/repository.py:32`, and the CLI's `--priority` option uses it as its default (`taskq/cli.py:28`).
+
+`CLAUDE.md` and the comment at `taskq/repository.py:26-27` still say the default is 5. Commit `3a4a4e0` ("Lower the default priority from 5 to 3") changed the value but not those two places. The code is the source of truth, so those notes are out of date.
+
+I haven't changed either one. I can update them to say 3 if you want.

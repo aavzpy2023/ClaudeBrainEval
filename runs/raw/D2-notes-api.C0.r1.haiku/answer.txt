@@ -1,0 +1,3 @@
+DELETE /notes/:id returns **404** with the JSON body `{ "error": "Note not found" }`.
+
+The handler in `src/server.ts:94-96` calls `store.delete(id)`, and if that returns false (no note with that id), it sends the 404. A successful delete returns 204 with no body. The test at `test/notes.test.ts:187` checks this for an id that was never created (`never-existed`).

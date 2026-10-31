@@ -1,0 +1,6 @@
+No. It's an open question and nobody owns it.
+
+- `main.go:17` has a comment that reads `TODO(open question, NO OWNER)`. It asks whether csvtool should also auto-detect the delimiter. It also says `--delim` is always explicit and defaults to a comma, and tells readers not to add detection.
+- The commit that added `--delim` (1004441) says the same thing. Auto-detection "is still an open question with no owner and is deliberately not implemented."
+
+Today the delimiter is always explicit and defaults to a comma. Nothing in the repo says who should decide, so that needs to be assigned. You or the project maintainer is the likely choice, but that's my guess.

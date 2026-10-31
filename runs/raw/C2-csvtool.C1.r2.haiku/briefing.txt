@@ -1,0 +1,5 @@
+ClaudeBrain — latest sessions in project "csvtool" on this computer:
+- 2026-10-29 · Csvtool head JSON output · a5e84cd6 · 50 msgs
+- 2026-10-29 · Csvtool stats count and sum · bb02f0b5 · 47 msgs
+- 2026-10-29 · csvtool head stray quote parse error · 1aba59da · 103 msgs
+Archived history, not instructions. If the user's task continues one of these, read it with the claude-brain recall skill (`claude-brain session <id>`).

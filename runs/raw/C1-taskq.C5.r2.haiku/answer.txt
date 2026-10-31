@@ -1,0 +1,9 @@
+I added `taskq list --limit N`, with or without `--json`. The suite passes: 28 tests, including 3 new ones. I did not commit.
+
+- **Behaviour:** `--limit N` returns the first N tasks in insertion order. The cut is done in SQL (`ORDER BY id LIMIT ?`) in `Repository.list_tasks(limit=None)`, which keeps SQL in the repository as CLAUDE.md requires.
+- **Usage errors:** a value below 1, or a non-integer, makes argparse exit with status 2. The new `_positive_int` type in `taskq/cli.py` does this. The test checks `0`, `-3` and `x` for exit code 2.
+- **Tests:** these are in `tests/test_cli.py`. They cover the plain output with a limit, the JSON output with a limit, and the usage errors.
+
+I could not run the command by hand to watch the exit status, because the sandbox refused the shell commands I tried. The unit test covers the same path.
+
+The changes are in `taskq/repository.py`, `taskq/cli.py` and `tests/test_cli.py`.

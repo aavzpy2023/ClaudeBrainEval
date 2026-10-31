@@ -1,0 +1,7 @@
+I added `--limit N` to `taskq list`. It works with and without `--json`, and the full suite passes (29 tests, up from 25). I did not commit.
+
+- **Repository** (`taskq/repository.py`): `list_tasks(limit=None)` adds a SQL `LIMIT`, so only N rows are read. The order is still insertion order. All SQL stays in `Repository`.
+- **CLI** (`taskq/cli.py`): `--limit` uses a small `_positive_int` type. A value below 1 fails argparse validation, which prints usage and exits 2. The same `--limit` value goes to both the plain and `--json` paths.
+- **Tests**: I added cases in `tests/test_repository.py` and `tests/test_cli.py` for the limit in plain and JSON output, and for `0` and `-3` exiting with status 2.
+
+I did not run the CLI by hand. The sandbox asked for approval on the manual check, so the exit-2 behaviour is covered only by the unit test, which asserts `SystemExit` with code 2.

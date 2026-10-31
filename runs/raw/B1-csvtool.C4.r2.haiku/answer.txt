@@ -1,0 +1,10 @@
+`stats` now prints a `mean:` line after `sum:`, computed over the non-empty numeric cells. `go vet` and `go test ./...` pass.
+
+- **Behaviour:** `mean` is `sum / non-empty cells`. If the column has no numeric cell, it prints `mean: n/a`. `count` still counts every data row, so `count` and `mean` can disagree when there are empty cells.
+- **Example:** for rows `1,2`, `3,`, `5` in column `b`, the output is `count: 3`, `sum: 2`, `mean: 2`.
+- **Code:** `stats.go` tracks the non-empty count and formats `mean`. The old TODO that blocked `mean` is removed. The usage text in `main.go` now says "(count, sum and mean)".
+- **Tests:** I updated the expected output in the existing stats tests, renamed `TestStatsEmptyCellAddsNothingToSum` to `TestStatsEmptyCellSkipped` to match the new policy, and added `TestStatsAllEmptyMeanNA` for the `n/a` path.
+
+I did not run `gofmt -l`, because the sandbox asked for approval and I didn't retry it. The edits follow the surrounding style, but formatting is unconfirmed.
+
+I did not commit anything.

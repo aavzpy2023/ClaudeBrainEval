@@ -1,0 +1,3 @@
+A task added with `taskq add "x"` and no `--priority` gets priority **3**.
+
+`DEFAULT_PRIORITY = 3` in `taskq/repository.py:32` sets the default, and the CLI's `--priority` option uses it as its default (`taskq/cli.py:28`). This matches the recent commit "Lower the default priority from 5 to 3." Lower numbers are more urgent (0 is the most urgent, 9 the least), so the default sits above the midpoint.

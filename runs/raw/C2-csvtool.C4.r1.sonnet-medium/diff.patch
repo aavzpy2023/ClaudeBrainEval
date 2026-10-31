@@ -1,0 +1,140 @@
+diff --git a/columns_test.go b/columns_test.go
+new file mode 100644
+index 0000000..e4993b0
+--- /dev/null
++++ b/columns_test.go
+@@ -0,0 +1,53 @@
++package main
++
++import (
++	"strings"
++	"testing"
++)
++
++func columnsOf(in string, delim rune, lazy bool) (string, error) {
++	var sb strings.Builder
++	err := Columns(strings.NewReader(in), &sb, delim, lazy)
++	return sb.String(), err
++}
++
++func TestColumns(t *testing.T) {
++	got, err := columnsOf("name,age\nann,3\n", ',', false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "name\nage\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestColumnsDelim(t *testing.T) {
++	got, err := columnsOf("a,b\tc\n1\t2\n", '\t', false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "a,b\nc\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestColumnsEmptyInput(t *testing.T) {
++	got, err := columnsOf("", ',', false)
++	if err != nil || got != "" {
++		t.Fatalf("got %q, %v; want no output and no error", got, err)
++	}
++}
++
++func TestColumnsLazyQuotes(t *testing.T) {
++	in := "na\"me,age\n"
++	if _, err := columnsOf(in, ',', false); err == nil {
++		t.Fatal("strict: want error for stray quote")
++	}
++	got, err := columnsOf(in, ',', true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "na\"me\nage\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..ccdf865 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -152,6 +152,28 @@ func Head(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 	return cw.Error()
+ }
+ 
++// Columns writes the header's column names to w, one per line. Empty input
++// writes nothing.
++func Columns(r io.Reader, w io.Writer, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	header, err := cr.Read()
++	if err == io.EOF {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	bw := bufio.NewWriter(w)
++	for _, h := range header {
++		bw.WriteString(h)
++		bw.WriteByte('\n')
++	}
++	return bw.Flush()
++}
++
+ // ErrUsage marks a bad command-line combination; the CLI exits 2 for it.
+ var ErrUsage = errors.New("usage")
+ 
+diff --git a/main.go b/main.go
+index 3c02ac8..b180084 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n       csvtool columns <file>   (header names, one per line)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,6 +128,18 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "columns":
++		fs := flag.NewFlagSet("columns", flag.ExitOnError)
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		fs.Parse(os.Args[2:])
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runColumns(fs.Arg(0), d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+@@ -175,6 +187,15 @@ func runSelect(path string, cols []string, delim rune, lazy bool) error {
+ 	return Select(f, os.Stdout, cols, delim, lazy)
+ }
+ 
++func runColumns(path string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Columns(f, os.Stdout, delim, lazy)
++}
++
+ func runStats(path, col string, delim rune, lazy bool) error {
+ 	f, err := open(path)
+ 	if err != nil {

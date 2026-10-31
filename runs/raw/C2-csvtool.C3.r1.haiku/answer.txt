@@ -1,0 +1,5 @@
+I added `csvtool columns <file>`. It prints the header's column names one per line, and `go test ./...` and `go vet ./...` pass. I didn't commit.
+
+- **Behaviour:** It accepts `-` for stdin and honours `--delim` and `--lazy-quotes` like the other subcommands. Empty input prints nothing and exits 0. Quoted names such as `"last, first"` come out as one name.
+- **Code:** `Columns` in `csvtool.go`, wiring and usage text in `main.go`, and tests in a new `columns_test.go`.
+- **Not verified:** I didn't run the built binary against a real file. `go run ... columns -delim ';' /dev/null` printed nothing, which is the empty-input case. `gofmt` needed approval, so I used `go fmt`, which ran clean on the new code. It also reformatted `csvtool_test.go`, which I didn't otherwise touch, so I reverted that file to keep the diff scoped.

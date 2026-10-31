@@ -1,0 +1,3 @@
+Yes, it's decided: csvtool does not auto-detect the delimiter. The project notes in `CLAUDE.md` say `--delim` (default comma, `\t` for tab) applies to input and output, with no auto-detection.
+
+The notes don't say who made that call. They record it as a decision, with no owner or date. The notes do name an owner for the open `mean` and empty-cell question: it has "no owner." Nothing like that appears for the delimiter, so I can't tell you who decided it. The commit that added `--delim` (`1004441`) may show who made the change, but it won't say whether the no-auto-detection choice was a deliberate policy decision.

@@ -1,0 +1,14 @@
+`stats` now prints a `mean` line after `sum`. `go test ./...` and `go vet ./...` pass. I did not get `gofmt -l` run, because the shell wanted approval for it, so formatting is still unconfirmed.
+
+Changes in `stats.go`:
+- Mean is `sum` divided by the number of non-empty numeric cells. Empty cells are skipped, as you decided.
+- When the column has no numeric cell, the line is `mean: n/a`.
+- `count` still counts every data row, including empty cells.
+- The mean uses the same number formatting as `sum`.
+- I removed the TODO that blocked `mean`, since the policy is now decided. The doc comment describes the new behaviour.
+
+Changes in `stats_test.go`:
+- Updated the expected output in `TestStatsCountSum` (mean 4.166666666666667), `TestStatsEmptyCellAddsNothingToSum` (mean 2), `TestStatsNoRows` (`mean: n/a`) and `TestStatsDelim` (mean 3).
+- Added `TestStatsMeanNAWithoutNumericCell`, which covers a column where every cell is empty.
+
+The ClaudeBrain digest I was given still says `mean` was deliberately left out and that `count` may need to exclude empty cells. That is out of date now. `count` is unchanged, as you asked.

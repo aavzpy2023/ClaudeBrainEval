@@ -1,0 +1,6 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes. I couldn't run `gofmt -l` because the shell needs approval for that command, so formatting is still unchecked. I haven't committed anything.
+
+- **Mean:** it is the sum divided by the number of non-empty cells, and it prints `mean: n/a` when the column has none. A row too short to reach the column counts as empty, so it is skipped too. The change is in `stats.go`.
+- **Count:** it still counts every data row, and `count` and `sum` print as before.
+- **Tests:** I added the `mean` line to the expected output in the four `stats_test.go` tests that check output. I didn't add a new test for the all-empty column case. The only `n/a` check is the no-rows test.
+- **Notes:** I replaced the "mean not implemented" TODO on `Stats` with a description of the new behavior. I also updated `CLAUDE.md`: the `stats` decision now says empty cells are skipped, and I removed the empty-cell/`mean` item from the open issues.

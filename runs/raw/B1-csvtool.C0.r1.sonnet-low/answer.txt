@@ -1,0 +1,5 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes. I didn't run the CLI by hand or commit.
+
+- **Calculation:** the mean is the sum divided by the number of non-empty numeric cells. If the column has none, it prints `mean: n/a`. Short rows with no cell in that column count as empty. `count` still counts every data row.
+- **Tests:** I updated the expected output in the four existing `stats` tests in `stats_test.go`. For example, the empty-cell test now expects `mean: 2` and the no-rows test expects `mean: n/a`. I didn't add a separate test for an all-empty column.
+- **Comments and help text:** I removed the "mean deliberately not implemented" TODO in `stats.go` and replaced it with a comment describing the skip-empty policy. The usage and `-c` flag text in `main.go` now mention mean.

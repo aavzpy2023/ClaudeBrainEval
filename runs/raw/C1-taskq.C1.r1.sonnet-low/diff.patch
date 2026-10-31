@@ -1,0 +1,101 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..4d392c9 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -15,6 +15,13 @@ def _print_json(doc):
+     print(json.dumps({"v": SCHEMA_VERSION, **doc}))
+ 
+ 
++def _positive_int(value):
++    n = int(value)
++    if n < 1:
++        raise argparse.ArgumentTypeError("must be at least 1")
++    return n
++
++
+ def main(argv=None):
+     parser = argparse.ArgumentParser(prog="taskq")
+     sub = parser.add_subparsers(dest="command", required=True)
+@@ -30,6 +37,12 @@ def main(argv=None):
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
++    ls.add_argument(
++        "--limit",
++        type=_positive_int,
++        metavar="N",
++        help="show at most N tasks (N >= 1)",
++    )
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -70,11 +83,11 @@ def main(argv=None):
+             {
+                 "tasks": [
+                     {"id": i, "priority": p, "text": t}
+-                    for i, p, t in repo.list_tasks()
++                    for i, p, t in repo.list_tasks(args.limit)
+                 ]
+             }
+         )
+     else:
+-        for task_id, priority, payload in repo.list_tasks():
++        for task_id, priority, payload in repo.list_tasks(args.limit):
+             print(f"{task_id}\t{priority}\t{payload}")
+     return 0
+diff --git a/taskq/repository.py b/taskq/repository.py
+index 8247752..f0127a8 100644
+--- a/taskq/repository.py
++++ b/taskq/repository.py
+@@ -93,11 +93,16 @@ class Repository:
+             conn.close()
+ 
+ 
+-    def list_tasks(self):
+-        """Return all tasks as (id, priority, payload) tuples in insertion order."""
++    def list_tasks(self, limit=None):
++        """Return tasks as (id, priority, payload) tuples in insertion order.
++
++        At most `limit` tasks are returned when it is given.
++        """
+         conn = self._connect()
+         try:
+-            return conn.execute("SELECT id, priority, payload FROM tasks ORDER BY id"
++            return conn.execute(
++                "SELECT id, priority, payload FROM tasks ORDER BY id LIMIT ?",
++                (-1 if limit is None else limit,),
+             ).fetchall()
+         finally:
+             conn.close()
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..a2a05e1 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -93,6 +93,27 @@ class CliTest(unittest.TestCase):
+                     cli.main(["list", "--json"])
+         self.assertEqual(json.loads(out.getvalue()), {"v": 1, "tasks": []})
+ 
++    def test_list_limit(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    for text in ("a", "b", "c"):
++                        cli.main(["add", text])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--limit", "2"])
++                    cli.main(["list", "--limit", "2", "--json"])
++        plain, js = out.getvalue().splitlines()[:2], out.getvalue().splitlines()[2]
++        self.assertEqual(plain, ["1\t5\ta", "2\t5\tb"])
++        self.assertEqual([t["text"] for t in json.loads(js)["tasks"]], ["a", "b"])
++
++    def test_list_limit_below_one_is_usage_error(self):
++        for bad in ("0", "-1"):
++            with contextlib.redirect_stderr(io.StringIO()):
++                with self.assertRaises(SystemExit) as cm:
++                    cli.main(["list", "--limit", bad])
++            self.assertEqual(cm.exception.code, 2)
++
+     def test_claim_json(self):
+         with tempfile.TemporaryDirectory() as d:
+             with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):

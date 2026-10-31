@@ -1,0 +1,9 @@
+`createStore` now recovers from an unparseable `NOTES_FILE`. It renames the bad file to `<file>.corrupt` and starts with an empty store instead of throwing. All 29 tests pass, including a new one for this case.
+
+The change is in `src/store.ts`. Only the `JSON.parse` call is wrapped, so a missing file still starts empty and other errors still surface. The new test in `test/persistence.test.ts` writes a truncated JSON file, checks that the store is empty and the original bytes are preserved in `.corrupt`, then confirms a create persists to the fresh file.
+
+Two things I did not handle:
+- If an older `<file>.corrupt` already exists, the rename overwrites it. A second corruption would therefore replace the first backup.
+- The rename itself can still throw (for example on a permissions error). The spec only covered parse failures, so I left that path alone.
+
+I have not committed the change.

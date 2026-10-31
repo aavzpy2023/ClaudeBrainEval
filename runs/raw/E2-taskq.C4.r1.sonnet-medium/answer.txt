@@ -1,0 +1,16 @@
+taskq migrates old databases automatically, in place, each time it opens a connection. The code is `Repository._connect()` in `taskq/repository.py:54-74`.
+
+1. **Create if missing.** It runs `CREATE TABLE IF NOT EXISTS tasks`, but only with the two original columns, `id` and `payload`. An existing table is left alone.
+2. **Inspect the schema.** It reads the current columns with `PRAGMA table_info(tasks)`.
+3. **Add what's missing.** For each newer column that's absent, it runs `ALTER TABLE ... ADD COLUMN` with a default, so existing rows get sensible values:
+   - `status`: `TEXT NOT NULL DEFAULT 'pending'`
+   - `lease_expires`: `REAL`, nullable
+   - `priority`: `INTEGER NOT NULL DEFAULT 5` (`DEFAULT_PRIORITY`)
+   - `attempts`: `INTEGER NOT NULL DEFAULT 0`
+   - `not_before`: `REAL`, nullable
+
+An old task therefore comes out as pending, priority 5, with no lease, no retries used and no backoff delay. The checks only look at which columns exist, so they run on every connection and do nothing once the schema is current.
+
+- **No schema version.** There's no `user_version` or migrations table. Each new column needs its own `if "x" not in columns` block, and the code can't handle anything beyond adding a column, such as renaming or retyping one.
+- **Not wrapped in a transaction.** The `ALTER`s run on the bare connection before any `with conn:`. If two processes open an old DB at the same moment, the loser could fail with "duplicate column name". I haven't tested that case.
+- **Old file location isn't migrated.** A `./taskq.db` from before the default moved to `~/.taskq/queue.db` is never picked up. You have to point `TASKQ_DB` at it, and it will then be upgraded in place like any other old file.

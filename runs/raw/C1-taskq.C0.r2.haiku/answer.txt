@@ -1,0 +1,9 @@
+`taskq list` now takes `--limit N`, with or without `--json`. It shows the first N tasks in insertion order, and a value below 1 exits with status 2. The full suite passes (28 tests, including 3 new ones for this).
+
+Changes:
+
+- **`taskq/repository.py`**: `list_tasks(limit=None)` applies the limit in SQL (`ORDER BY id LIMIT ?`). `None` means no limit, using SQLite's negative-LIMIT behaviour.
+- **`taskq/cli.py`**: `list` gets a `--limit` option. After parsing, a value below 1 calls `parser.error`, which prints usage and exits 2. The text and JSON paths both pass the limit through.
+- **`tests/test_cli.py`**: tests cover the text output, the JSON output, and the `0` and `-3` usage errors.
+
+I didn't commit anything.

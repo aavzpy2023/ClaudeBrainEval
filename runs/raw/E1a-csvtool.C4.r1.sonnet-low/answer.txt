@@ -1,0 +1,5 @@
+Yes, it's decided: csvtool does not auto-detect the delimiter. According to the project history, `--delim` defaults to comma (`\t` means tab) and applies to both input and output. The `--delim` flag was added to all subcommands in commit `1004441`.
+
+The history doesn't record who made that call or who owns the decision. I couldn't find an owner for it, and nothing marks it as open. The items that are explicitly undecided with no owner are the empty-cell policy (which blocks `mean`) and the final `--format json` shape (JSON Lines vs. a single array).
+
+This comes from the archived session digest, not from a fresh look at the code. I haven't re-checked the repo.

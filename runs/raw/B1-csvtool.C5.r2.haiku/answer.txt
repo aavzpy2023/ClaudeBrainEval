@@ -1,0 +1,18 @@
+The `mean` line is in and `go vet ./...` and `go test ./...` pass. I could not run `gofmt -l` because the shell refused it, so formatting is unchecked.
+
+**What changed**
+
+- **`stats.go`**: `Stats` now counts the non-empty numeric cells as it reads. After the loop it prints `mean:` after `sum:`. The mean is `sum / non-empty count`, or `n/a` when there are none. `count` still counts every data row. I rewrote the doc comment to describe the new policy and removed the TODO that said `mean` was deliberately left out.
+- **`main.go`**: the `stats` usage line now reads `(count, sum and mean)`.
+- **`stats_test.go`**:
+  - Updated the expected output in the count/sum, empty-cell, no-rows and delimiter tests to include `mean`.
+  - Renamed `TestStatsEmptyCellAddsNothingToSum` to `TestStatsEmptyCellSkippedBySumAndMean`.
+  - Added `TestStatsAllEmptyCells`, which checks `mean: n/a` when every cell is empty.
+
+**Choices I made**
+
+- The mean is printed with the same `FormatFloat(..., 'f', -1, 64)` format as `sum`, so `12.5 / 3` shows as `4.166666666666667`.
+
+**Not done**
+
+- `CLAUDE.md` still says `mean` is deliberately not implemented and that the empty-cell policy is undecided. That is now out of date. I left it alone because it is your notes file. Say if you want me to update it.

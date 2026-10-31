@@ -1,0 +1,5 @@
+`createStore` no longer crashes on a corrupt `NOTES_FILE`. The change is in `load()` in `src/store.ts`. If the file can't be parsed as JSON, or parses to something other than an array, it is renamed to `<file>.corrupt` and the store starts empty. The existing 28 tests pass. I didn't add a test for the corrupt-file case or try it by hand.
+
+If a `<file>.corrupt` already exists from an earlier recovery, `renameSync` overwrites it, so only the most recent corrupt file is kept.
+
+I haven't committed the change.

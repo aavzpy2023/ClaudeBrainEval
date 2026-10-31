@@ -1,0 +1,7 @@
+**The fix:** `Repository.claim` now runs `BEGIN IMMEDIATE` before its SELECT. That takes SQLite's write lock up front, so the select-then-mark-running sequence is atomic. This was commit `3b07992`.
+
+**Why it happened:** Python's `sqlite3` module doesn't open a transaction before a SELECT. It only opens one implicitly before a DML statement such as UPDATE. Two workers could therefore both run the SELECT and see the same `queued` task. Each would then UPDATE it to `running`, and both would be handed the task. The read and the write were not one atomic step.
+
+**What was rejected:** a lock file, to serialize claimers outside the database. You chose not to use one. `BEGIN IMMEDIATE` gets the same mutual exclusion from SQLite itself, with no extra file to manage.
+
+I took this from the project's decision notes and commit history. I didn't re-read `taskq/repository.py` to confirm the current code matches. The notes only say a lock file was rejected "by the user's choice", so I can't tell you what other downsides were weighed.

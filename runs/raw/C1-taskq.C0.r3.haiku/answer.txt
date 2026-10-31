@@ -1,0 +1,18 @@
+The code and tests are done. I couldn't run the manual CLI check, because the sandbox refused the compound shell command. The unit tests cover the same paths through `cli.main`.
+
+**What changed**
+
+- **`taskq/repository.py`**: `list_tasks(limit=None)` now applies the limit in SQL (`ORDER BY id LIMIT ?`). The limit is applied before rows are fetched, and `None` means no limit (SQLite treats `-1` as unlimited).
+- **`taskq/cli.py`**: `taskq list` takes `--limit N`. A `_positive_int` type rejects values below 1 through argparse, so the error message goes to stderr and the exit status is 2. The option is passed through to both the plain and `--json` output paths.
+- **`tests/test_cli.py`**: three new tests cover the plain output with a limit, the `--json` output with a limit, and a usage error with exit status 2 for `0` and `-3`.
+
+**Verification**
+
+The full suite passes: 28 tests and 2 subtests, up from 25. I did not run a manual `taskq list --limit` against a real database.
+
+**Choices I made**
+
+- Limit validation uses argparse's usage error, so it exits with status 2. Non-integer input like `abc` also exits with status 2, which is the standard argparse behavior.
+- The limit applies to `list` only. `dead` and `claim` are unchanged.
+
+I did not commit, since you didn't ask for one.

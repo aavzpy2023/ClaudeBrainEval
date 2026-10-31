@@ -1,0 +1,5 @@
+No, it hasn't been decided. Automatic delimiter detection is not implemented. The delimiter is always set explicitly with `--delim`, which defaults to a comma (`\t` means tab).
+
+Nobody owns the decision. The code comment on `delimFlag` in `main.go` (lines 17–20) marks it as an open question with no owner. It says not to add detection until someone takes it on. The project notes say the same thing. I found no commit or document that assigns it to anyone.
+
+If you want to settle it, you would need to name an owner and then decide whether to add detection at all. The existing `--delim` flag is the only supported path until then.

@@ -1,0 +1,15 @@
+I added the `columns` subcommand and its tests, and the Go test suite passes. I could not run the built binary by hand, because the sandbox kept asking for approval on each direct invocation.
+
+**What changed** (all uncommitted in `/tmp/claude-brain-eval/runs/C2-csvtool.C1.r2.haiku/csvtool`):
+
+- **`columns.go`** (new): `Columns(r, w, delim, lazy)` reads the header row and writes each name on its own line. Empty input writes nothing and returns no error.
+- **`main.go`**: a `columns` case that accepts `--delim` and `--lazy-quotes`, and treats `-` as stdin through the existing `open` helper. It takes one file argument, like the other subcommands. I also added a usage line.
+- **`columns_test.go`** (new): covers a normal header, empty input, a tab delimiter, and lazy quotes (strict mode rejects a bare quote, lazy mode accepts it).
+
+**Verification:** `go test ./...` passes and `go vet ./...` is clean. The binary builds. I did not run `gofmt` because the sandbox blocked that command, so formatting is unchecked. I also did not exercise the CLI end to end, so the `-` stdin path and the empty-input exit code are covered only by reading the code.
+
+**Choices I made:**
+- I did not add `--format`. The spec didn't ask for it, and the output is always plain lines. If you want it on every subcommand for consistency, that's a small change.
+- A header with a newline inside a quoted name prints as two lines. That is a consequence of "one per line" and I left it alone.
+
+I haven't committed. Say the word and I'll commit with the standard attribution line.

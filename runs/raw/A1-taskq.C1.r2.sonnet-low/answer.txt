@@ -1,0 +1,16 @@
+The commit that fixed this is `3b07992`, "Fix duplicate task hand-out when workers claim concurrently". Its message and diff explain the cause and the fix. I couldn't find the rejected alternative.
+
+**Why it happened**
+- `claim()` ran a SELECT to find the next claimable task, then an UPDATE to mark it running.
+- Python's `sqlite3` only opens an implicit transaction before DML (INSERT, UPDATE, DELETE), so the SELECT ran with no lock held.
+- Two workers could both SELECT the same pending row before either UPDATE took the write lock. Both then marked it running and returned it.
+
+**How it was fixed**
+- `claim()` in `taskq/storage.py` now runs `BEGIN IMMEDIATE` before the SELECT.
+- That takes the write lock first. A second worker waits until the first commits, then sees the task as running and picks a different one.
+- A regression test, `test_concurrent_claims_never_return_the_same_task`, uses two threads and a `_after_select_hook` that sleeps between the SELECT and UPDATE. This makes the race deterministic. It fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative**
+The commit message, the code comments and the repo don't record one. The only "decision" notes I found are about other topics: SQLite versus Redis or JSON for storage, and the priority ordering.
+
+The three recent sessions in the history hook are about the dead-letter listing, JSON output and the Repository class, not this fix. If you remember discussing something like a single atomic `UPDATE ... RETURNING` or a compare-and-set retry, that rationale isn't written down in the repo.

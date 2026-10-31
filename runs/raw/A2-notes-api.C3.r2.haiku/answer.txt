@@ -1,0 +1,10 @@
+**Root cause:** `PATCH /notes/:id` passed the raw request body straight to `store.patch()`, which ran `Object.assign(storedNote, changes)`. Nothing filtered or validated the body, so any key a client sent was written onto the stored record, including `id` and `createdAt`. Because `createdAt` is stored as epoch ms, a client sending `createdAt: 0` would make the note read as 1970-01-01. POST and PUT were not affected because `validateNoteInput` copies out only `title` and `body`.
+
+**Fix (commit `e9d532a`, "Fix PATCH overwriting id and createdAt; reject unknown fields with 422"):**
+
+- **`src/validation.ts`:** added `validateNotePatch`. It accepts only `title` and `body`, applies the same rules as create, and returns 422 for any other field, an empty patch, or an invalid value. It rejects unknown fields instead of dropping them silently, so a client that sends `id` or `createdAt` learns that it had no effect.
+- **`src/store.ts`:** `patch` now copies only `title` and `body` onto the note instead of using `Object.assign`. This is a second layer of protection: even if validation were bypassed, the store cannot touch `id` or `createdAt`.
+- **`src/server.ts`:** the PATCH route runs the body through `validateNotePatch` and passes only the validated value to `store.patch`.
+- **`test/notes.test.ts`:** added a regression test.
+
+The session digest gives a different commit hash (`26cc749`) for this fix. The git history shows `e9d532a`, so I went with that.

@@ -1,0 +1,139 @@
+diff --git a/columns_test.go b/columns_test.go
+new file mode 100644
+index 0000000..a042188
+--- /dev/null
++++ b/columns_test.go
+@@ -0,0 +1,56 @@
++package main
++
++import (
++	"strings"
++	"testing"
++)
++
++func columnsOf(in string, delim rune, lazy bool) (string, error) {
++	var sb strings.Builder
++	err := Columns(strings.NewReader(in), &sb, delim, lazy)
++	return sb.String(), err
++}
++
++func TestColumns(t *testing.T) {
++	got, err := columnsOf("name,age\nann,3\n", ',', false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "name\nage\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestColumnsDelim(t *testing.T) {
++	got, err := columnsOf("a\tb\n1\t2\n", '\t', false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "a\nb\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestColumnsLazyQuotes(t *testing.T) {
++	in := "a,b\"c\n1,2\n"
++	if _, err := columnsOf(in, ',', false); err == nil {
++		t.Fatal("strict parse should fail on a stray quote")
++	}
++	got, err := columnsOf(in, ',', true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "a\nb\"c\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestColumnsEmptyInput(t *testing.T) {
++	got, err := columnsOf("", ',', false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got != "" {
++		t.Fatalf("got %q, want no output", got)
++	}
++}
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..b888ab0 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -224,6 +224,25 @@ var ErrMissingColumn = errors.New("missing column")
+ // Select streams only the named columns of the CSV in r to w, in the order
+ // given, row by row. Names are matched case-sensitively against the header row.
+ // A missing column is reported before anything is written.
++func Columns(r io.Reader, w io.Writer, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	header, err := cr.Read()
++	if err == io.EOF {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	bw := bufio.NewWriter(w)
++	for _, name := range header {
++		fmt.Fprintln(bw, name)
++	}
++	return bw.Flush()
++}
++
+ func Select(r io.Reader, w io.Writer, cols []string, delim rune, lazy bool) error {
+ 	cr := csv.NewReader(r)
+ 	cr.Comma = delim
+diff --git a/main.go b/main.go
+index 3c02ac8..0318e23 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n       csvtool columns <file>   (header names, one per line)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,12 +128,33 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "columns":
++		fs := flag.NewFlagSet("columns", flag.ExitOnError)
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		fs.Parse(os.Args[2:])
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runColumns(fs.Arg(0), d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+ 	}
+ }
+ 
++func runColumns(path string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Columns(f, os.Stdout, delim, lazy)
++}
++
+ // fail exits 2 for a missing column, 1 for any other error.
+ func fail(err error) {
+ 	if err == nil {

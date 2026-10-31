@@ -1,0 +1,18 @@
+taskq upgrades old databases itself, in place, each time it opens a connection. The code is `Repository._connect` in `taskq/repository.py:54-74`:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks` with only the original columns, `id` and `payload`. A database that already has the table is left alone.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...`. The columns it checks are:
+   - `status`, default `'pending'`
+   - `lease_expires`, nullable
+   - `priority`, default `DEFAULT_PRIORITY`
+   - `attempts`, default `0`
+   - `not_before`, nullable
+
+Rows from the old file stay in place. They get the default values for the new columns, so an old task becomes a pending task with default priority and zero attempts.
+
+There is no schema version number (`user_version`) and no separate migration step. The check is "does this column exist?", and it runs on every connection. It's cheap, and it only changes anything when a column is missing.
+
+`tests/test_repository.py:92` (`test_migrates_old_schema`) covers this. It builds a table with only `id` and `payload`, inserts a row, and checks that the repository still works with it.
+
+Because it only adds columns, it can't handle renamed or dropped columns, changed types, or new indexes. Those would need a real versioned migration.

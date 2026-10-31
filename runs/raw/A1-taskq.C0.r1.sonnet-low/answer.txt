@@ -1,0 +1,11 @@
+**Why it happened.** `claim()` did a SELECT to find the next claimable task and then a separate UPDATE to mark it running. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT ran with no lock held. Two workers could both SELECT the same pending row before either UPDATE took the write lock. Both then marked it running and returned it. The original commit `1aa1954` knowingly shipped this "simple version" and said to optimize later if it became a problem.
+
+**How it was fixed** (commit `3b07992`). `claim()` now runs `BEGIN IMMEDIATE` before the SELECT. That takes the write lock up front, so a second worker waits until the first commits. It then sees the task as running and picks a different one. The commit also added a regression test. It uses two threads and an `_after_select_hook` that sleeps between the SELECT and UPDATE to make the race deterministic. The test fails without `BEGIN IMMEDIATE` and passes with it. The logic has since moved into the `Repository` class (see the comment near `taskq/repository.py:126`).
+
+**Rejected alternative.** The history doesn't record one for this bug. The commit message describes the fix but doesn't say what else was considered. I searched the git log and the code for a "rejected" or "instead of" note about concurrent claiming and found none.
+
+The two rejections the history does record are unrelated to this fix:
+- Priorities: "higher number = more urgent" was rejected in favor of the nice-style convention.
+- Leases: a 60 s lease was chosen over a worker heartbeat.
+
+Any other alternative, such as a single atomic `UPDATE ... RETURNING` or optimistic retry, would be my speculation, not project history.

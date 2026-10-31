@@ -1,0 +1,55 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..9f0fc17 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -24,9 +24,16 @@ export type NoteStore = {
+ // TODO(open question, no owner yet): persistence is only safe for a single process. Concurrent writes
+ // from several processes can lose updates (each rewrites the whole file from its own in-memory copy).
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
++// An unparseable file is moved aside to `<file>.corrupt` so the server can start with an empty store
++// instead of crashing; the original bytes are kept for inspection.
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  try {
++    return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  } catch {
++    renameSync(file, `${file}.corrupt`);
++    return [];
++  }
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..929d1ea 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -1,6 +1,6 @@
+ import { after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
++import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import { createStore } from '../src/store.ts';
+@@ -43,3 +43,20 @@ describe('note store persistence', () => {
+     assert.equal(createStore(undefined, file).get('x')?.createdAt, '1970-01-01T00:00:00.000Z');
+   });
+ });
++
++describe('note store with a corrupt file', () => {
++  it('moves an unparseable file aside and starts empty', () => {
++    const file = fileIn('broken.json');
++    writeFileSync(file, 'not json');
++    assert.deepEqual(createStore(undefined, file).list(), []);
++    assert.equal(readFileSync(`${file}.corrupt`, 'utf8'), 'not json');
++    assert.equal(existsSync(file), false);
++  });
++
++  it('keeps working and persists over the recovered store', () => {
++    const file = fileIn('broken2.json');
++    writeFileSync(file, 'garbage');
++    const note = createStore(undefined, file).create({ title: 't', body: 'b' });
++    assert.equal(createStore(undefined, file).get(note.id)?.title, 't');
++  });
++});

@@ -1,0 +1,7 @@
+`taskq list` now accepts `--limit N`, with or without `--json`. The suite passes: 28 tests, up from 25, including three new ones for this change.
+
+- **Behaviour:** the limit is applied in SQL (`ORDER BY id LIMIT ?`), so it returns the first N tasks in insertion order and never loads the rest.
+- **Usage errors:** a value below 1 (including negatives like `-3`) exits with status 2 and an argparse error message.
+- **Files:** `taskq/repository.py` (`list_tasks(limit=None)`), `taskq/cli.py` (the `--limit` option and a `_positive_int` validator), and `tests/test_cli.py`.
+
+I haven't committed anything; the changes are in the working tree.

@@ -1,0 +1,10 @@
+`taskq list --limit N` is in place, with and without `--json`. The suite passes (29 tests, up from 25). I did not commit.
+
+- **Behaviour:** the limit caps the output at N tasks, in insertion order. It applies to both the plain and JSON output, and the JSON stays `{"v": 1, "tasks": [...]}`.
+- **Usage error:** a value below 1 (including negatives) is rejected by argparse with exit status 2 and a message saying the value must be at least 1.
+- **Where the change lives:**
+  - `taskq/repository.py`: `list_tasks(limit=None)` adds a `LIMIT ?` to the existing query. `None` keeps the old unlimited behaviour, so SQL stays inside `Repository`.
+  - `taskq/cli.py`: a `_positive_int` argparse type, and `--limit` on the `list` subcommand passed through to both output branches.
+  - `tests/test_repository.py` and `tests/test_cli.py`: tests for the limit with plain output, with `--json`, and for values 0 and -3 returning exit 2.
+
+I did not run a manual end-to-end check from the shell. Those commands were blocked by the permission layer, so the exit-2 path is verified only through the unit test that asserts `SystemExit` with code 2.

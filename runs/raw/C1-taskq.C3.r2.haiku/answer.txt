@@ -1,0 +1,9 @@
+`taskq list --limit N` is in place, with and without `--json`. `python3 -m unittest` passes all 28 tests, up from 25. The three new tests cover the plain and JSON paths and the exit-2 rejection of values below 1.
+
+- **Repository** (`taskq/repository.py`): `list_tasks(limit=None)` applies `LIMIT` in SQL after `ORDER BY id`, so the first N in insertion order come back. Without a limit the query is unchanged.
+- **CLI** (`taskq/cli.py`): `--limit` uses a small `_positive_int` type that raises `ArgumentTypeError`. argparse turns that into a usage error with exit status 2. Both the plain and `--json` branches of `list` pass the limit through.
+- **Tests** (`tests/test_cli.py`): cover the plain output, the JSON output, and values of 0 and -3 failing with exit 2.
+
+I didn't run `taskq list --limit 0` by hand in a shell, because the sandbox refused that command. The exit-2 path is covered by the unit test instead.
+
+I did not commit anything.

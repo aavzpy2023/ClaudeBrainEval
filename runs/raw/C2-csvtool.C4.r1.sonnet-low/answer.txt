@@ -1,0 +1,9 @@
+I added `csvtool columns <file>`, and `go test ./...` passes. I couldn't run `gofmt -l` because the shell wanted approval for it, so formatting is unchecked. I also didn't run the CLI end to end, so reading from `-` and `--delim` are covered only by the unit tests.
+
+- **Behaviour:** It prints each header name on its own line, as plain text rather than CSV-quoted. A header like `"a,b"` prints as `a,b`. Empty input prints nothing and exits 0.
+- **Flags:** `-` reads standard input. `--delim` and `--lazy-quotes` work as in the other subcommands. A stray quote in the header is an error unless you pass `--lazy-quotes`.
+- **Code:** `Columns` is in `csvtool.go`, and the `columns` case and `runColumns` are in `main.go`, with a line added to the usage text. The new tests are in `columns_test.go`.
+
+`--format json` exits 2 for `columns`, the same as `select`, `filter` and `stats`.
+
+I haven't committed anything.

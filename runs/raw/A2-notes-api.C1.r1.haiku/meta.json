@@ -1,0 +1,16 @@
+{
+  "run_id": "A2-notes-api.C1.r1.haiku",
+  "model_requested": "haiku",
+  "effort": "low",
+  "condition": "C1",
+  "model_resolved": "claude-haiku-5-5",
+  "claude_version": "2.1.310 (Claude Code)",
+  "brain_commit": "6fd55f2",
+  "snapshot_db_sha256": "00b87977542861202ab47610dd347531a6c477beaf9bbc64a4dbf15f01452eae",
+  "snapshot_bundle_sha256": "1c6f986c6cd2581753fa3a1e126a3d3d6d06e8e8b38f5204ef7f34e639fdde03",
+  "prompt_sha256": "20f356d372e96fe2182f7602eb40f500302e7a4027d9168eaf52e2856df88bdf",
+  "tools": "Read,Glob,Grep,Bash(git *)",
+  "started": "2026-10-31T00:58:29+00:00",
+  "exit_code": 0,
+  "status": "ok"
+}

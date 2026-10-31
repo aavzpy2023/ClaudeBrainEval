@@ -1,0 +1,7 @@
+**Root cause:** `PATCH /notes/:id` passed the raw request body straight to `store.patch()`, which did `Object.assign(note, changes)`. Nothing filtered the body. Any key a client sent was written onto the stored record, including `id` and `createdAt`. For example, `createdAt: 0` turned the creation date into 1970-01-01, because `createdAt` is stored as epoch ms. The create path was safe only because `validateNoteInput` copies out just `title` and `body`.
+
+**Fix (commit `e9d532a`):**
+- **Validation:** `src/validation.ts` gets a new `validateNotePatch`. It accepts only `title` and `body` and applies the same rules as create (non-empty title, length limits, body must be a string). It returns 422 for any other field, an empty patch, or an invalid value. The commit chose strict rejection over silently ignoring unknown fields, so a client that sends `id` or `createdAt` finds out instead of assuming it took effect.
+- **Server:** `src/server.ts` runs the body through `validateNotePatch` and passes only the validated value to `store.patch()`.
+- **Store:** `src/store.ts` no longer uses `Object.assign`. It sets `title` and `body` explicitly, only when they are present.
+- **Tests:** `test/notes.test.ts` has two new tests. One checks that a patch containing `id` or `createdAt` returns 422 and leaves the note unchanged. The other checks that invalid `title` and `body` values return 422.

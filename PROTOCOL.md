@@ -94,7 +94,8 @@ Opus subset (3 per category). Planned runs: pilot 360, main phase 2835.
 
 - Run unit: `(task, condition, rep, model, effort)`. Order randomized, seed in `bench/matrix.json`.
 - Subject models, all at low effort (same instruction, though "low" is not equivalent across
-  models; declared in section 8): Haiku and Sonnet run the full design (5 reps). Opus runs a
+  models; declared in section 8): Haiku and Sonnet (low) run the full design (5 reps). Sonnet at medium effort is added in the pilot only, to see whether effort changes the memory effect; it enters the main phase only if the pilot shows it matters. Its pilot was stopped after 12 runs
+to save subscription quota (arm disabled in `bench/matrix.json`); those rows are kept and reported as a partial arm. Opus runs a
   pre-fixed subset (15 tasks, 3 per category), conditions C0/C3/C5 only, 3 reps (135 runs).
   The Opus subset size is subject to the pilot: it is adjusted to the runs that fit the
   subscription quota, and frozen with `prereg-v1`. Cross-model comparisons use only tasks and

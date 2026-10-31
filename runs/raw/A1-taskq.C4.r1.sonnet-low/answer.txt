@@ -1,0 +1,7 @@
+**Why it happened:** Python's `sqlite3` module doesn't open a transaction before a `SELECT`. In `claim`, two workers could each run the `SELECT` for the next claimable task and get the same row. Each then ran its `UPDATE` to mark it running, so both were handed the task.
+
+**The fix:** `claim` now runs `BEGIN IMMEDIATE` before the `SELECT`. That takes SQLite's write lock up front, so the select-then-update sequence is atomic. A second worker waits, then sees the task already claimed. The fix is commit `3b07992`. The repository has a test hook, `_after_select_hook`, which can be used to test this race.
+
+**Rejected alternative:** a separate lock file around `claim`. You chose not to use one. SQLite's own locking already gives the exclusion, so a lock file would add another mechanism to keep consistent and clean up.
+
+I took this from the project's history notes and didn't re-read the code, so check `taskq/repository.py` if you need exact details.

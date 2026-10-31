@@ -1,0 +1,9 @@
+`taskq list` now accepts `--limit N`, with or without `--json`. The suite passes: 27 tests, up from 25. I did not make the manual `--limit 0` shell check because the sandbox refused that command; the new unit test asserts the exit status 2 directly.
+
+What changed:
+
+- **`taskq/repository.py`**: `list_tasks(limit=None)` adds a SQL `LIMIT` after `ORDER BY id`, so the cap applies in insertion order. With no limit it runs the same query as before.
+- **`taskq/cli.py`**: `--limit` uses a `_positive_int` type. A value below 1 goes through argparse's usage-error path, which exits with status 2. Both the plain and `--json` branches pass the limit through.
+- **`tests/test_cli.py`**: `test_list_limit` checks the plain and JSON output with `--limit 2` over three tasks. `test_list_limit_rejects_below_one` checks `0` and `-3` for exit status 2.
+
+I did not commit anything.

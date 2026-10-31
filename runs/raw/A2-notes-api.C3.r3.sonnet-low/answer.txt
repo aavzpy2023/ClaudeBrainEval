@@ -1,0 +1,9 @@
+**Root cause:** The PATCH handler took the raw request body and `Object.assign`ed it onto the stored note. Any field the client sent, including `id` and `createdAt`, replaced the stored value.
+
+**Fix:** There were two commits.
+- `2da92fb` added PATCH.
+- `e9d532a` fixed the overwrite. It changed `store.patch` to copy only `title` and `body` from the input.
+
+PATCH is now strict. `validateNotePatch` returns 422 for any unknown field, an empty patch, or an invalid value. Rejecting unknown fields means a client that sends `id` gets an error instead of having the field silently dropped.
+
+This comes from the project history I was given at session start. I haven't opened the code or the diff in this session.

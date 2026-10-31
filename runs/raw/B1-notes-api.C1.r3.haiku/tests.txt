@@ -1,0 +1,15 @@
+notes-api: /tmp/oracle-rDg7xn/notes.json is not valid JSON; moved it to /tmp/oracle-rDg7xn/notes.json.corrupt and starting empty
+notes-api: /tmp/oracle-irkmB5/notes.json is not valid JSON; moved it to /tmp/oracle-irkmB5/notes.json.corrupt and starting empty
+▶ oracle: corrupt NOTES_FILE
+  ✔ does not throw, moves the bad file to <file>.corrupt and starts empty (2.384857ms)
+  ✔ the store keeps working and persists after recovering (2.200891ms)
+  ✔ a valid file loads normally and leaves no .corrupt file (0.368841ms)
+✔ oracle: corrupt NOTES_FILE (6.284343ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 132.194277

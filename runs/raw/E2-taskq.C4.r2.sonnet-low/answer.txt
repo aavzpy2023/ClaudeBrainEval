@@ -1,0 +1,17 @@
+taskq upgrades an old database in place, with a lightweight migration that runs every time it opens a connection. The code is in `Repository._connect` (`taskq/repository.py:54-74`).
+
+1. **Base table:** it runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. That does nothing if the table already exists.
+2. **Column check:** it reads the existing columns with `PRAGMA table_info(tasks)`.
+3. **Adding columns:** for each newer column that is missing, it runs `ALTER TABLE ... ADD COLUMN`. The columns and their defaults are:
+   - `status`: `'pending'`
+   - `lease_expires`: NULL
+   - `priority`: `DEFAULT_PRIORITY` (5)
+   - `attempts`: 0
+   - `not_before`: NULL
+
+Existing rows get those defaults. Old tasks therefore become normal pending tasks with middle priority, no retries used and no backoff delay.
+
+- **No version number:** it doesn't use `PRAGMA user_version` or a migrations table. It checks the columns directly each time, so it is idempotent and works with any partially upgraded file.
+- **Future columns:** each one needs its own `if "x" not in columns` block.
+- **Scope:** it only adds missing columns. It never renames, drops or retypes them.
+- **Old database paths:** this is separate from the database location. Old `./taskq.db` files in the working directory are not picked up automatically. Point `TASKQ_DB` at one to use it, and it will be migrated on first open.

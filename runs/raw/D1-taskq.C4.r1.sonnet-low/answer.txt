@@ -1,0 +1,3 @@
+The task gets priority **3**. `taskq/cli.py:28` defaults `--priority` to `repository.DEFAULT_PRIORITY`, and `taskq/repository.py:32` sets that to 3. Commit `3a4a4e0` lowered it from 5.
+
+The comment at `taskq/repository.py:27` still says "default 5", so it is out of date. Priority 0 is the most urgent, so 3 ranks a bit more urgent than the old default.

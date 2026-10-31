@@ -1,0 +1,5 @@
+It answers **404** with the body `{ "error": "Note not found" }`. This is in `src/server.ts:94-99`.
+
+When the note exists, DELETE removes it and answers **204** with no body. A second DELETE on the same id then gets 404. The code comment says the 404 is deliberate, "so clients notice stale ids". Commit `cfa5650` made DELETE strict, and `test/notes.test.ts:181` covers both cases.
+
+One inconsistency: the 404 body is a plain string, `{ error: 'Note not found' }`. The 422 validation error uses the structured form `{ error: { code: 'invalid_note', message } }`. I didn't change either.

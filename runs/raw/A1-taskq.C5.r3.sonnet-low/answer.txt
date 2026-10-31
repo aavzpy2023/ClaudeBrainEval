@@ -1,0 +1,5 @@
+**Why it happened:** Python's `sqlite3` module doesn't open a transaction before a `SELECT`. In `claim`, two workers could both run the SELECT and see the same task as claimable. Each would then UPDATE it to `running`, so both were handed the task.
+
+**The fix:** `claim` now runs `BEGIN IMMEDIATE` before the SELECT. That takes SQLite's write lock up front, so the select-then-update sequence is serialized. A second worker waits until the first has marked the task `running`, and then sees it as taken. The repository has a test hook, `_after_select_hook`, for exercising that gap.
+
+**The rejected alternative:** a separate lock file. CLAUDE.md records "No lock file, by the user's choice." The reason given is only that it was the user's choice. Presumably the SQLite transaction already provides the atomicity, so a lock file would add nothing.

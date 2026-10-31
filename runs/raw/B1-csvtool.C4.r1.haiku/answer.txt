@@ -1,0 +1,12 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` and `go vet ./...` both pass.
+
+- **Policy:** empty cells are skipped. `mean` is the sum divided by the number of non-empty numeric cells. `count` still counts every data row.
+- **No numeric cell:** prints `mean: n/a`.
+- **Format:** `mean` uses the same float formatting as `sum`, so `4.166666666666667` shows the full precision.
+
+Changes:
+- `stats.go`: added a `numeric` counter and the `mean` line. I replaced the "mean is deliberately NOT implemented" TODO with the decided policy in the doc comment.
+- `main.go`: updated the usage string to "(count, sum and mean)" and the `-c` flag help to "count, sum and average".
+- `stats_test.go`: updated the expected output in the four tests that print stats. `TestStatsEmptyCellAddsNothingToSum` now checks `mean: 2`, which only holds under the skip policy.
+
+I did not run `gofmt -l .`, because the shell required approval for that command. The earlier gofmt status is still unconfirmed.

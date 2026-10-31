@@ -1,0 +1,18 @@
+taskq upgrades old databases in place with a lightweight migration that runs on every connection. The code is in `Repository._connect()` in `taskq/repository.py:54-74`.
+
+1. **Base table:** it runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. This only creates the table on a fresh database. An old file with the table already in place is left alone.
+2. **Column check:** it reads the existing columns with `PRAGMA table_info(tasks)`.
+3. **Missing columns:** for each newer column that isn't there, it runs `ALTER TABLE tasks ADD COLUMN ...` with a default. The defaults mean existing rows get sensible values.
+
+| Column | Type | Default |
+|---|---|---|
+| `status` | TEXT NOT NULL | `'pending'` |
+| `lease_expires` | REAL | NULL |
+| `priority` | INTEGER NOT NULL | `DEFAULT_PRIORITY` |
+| `attempts` | INTEGER NOT NULL | `0` |
+| `not_before` | REAL | NULL |
+
+- **No version tracking:** there is no `user_version` or migrations table. It checks for each column by name, so it works from any older schema, even one that only has `id` and `payload`.
+- **Idempotent:** once a column exists, the check skips it.
+- **Cost and concurrency:** the check runs on every `_connect()` call, so every operation pays for a `PRAGMA`. I didn't see any locking around the migration. If two workers open an old DB at the same moment, one `ALTER` could fail with a "duplicate column" error. I haven't tested that.
+- **Test coverage:** `tests/test_repository.py:92` (`test_migrates_old_schema`) covers the migration. It builds a DB with only `id` and `payload`.

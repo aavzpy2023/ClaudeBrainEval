@@ -1,0 +1,7 @@
+`taskq list` now takes `--limit N`, with and without `--json`. The full suite passes, including two new tests: one for the limit in both output modes, one for the exit status.
+
+- **Behavior:** it prints at most N tasks, in insertion order (ordered by id).
+- **Usage error:** a value below 1 (`0`, `-1`) is rejected with exit status 2. A non-integer value is also a usage error, so it exits 2 as well.
+- **Where:** the option and its validation are in `taskq/cli.py`. `Repository.list_tasks` in `taskq/repository.py` takes an optional `limit` and applies it in SQL. With no limit it returns everything, as before.
+
+I did not commit anything.

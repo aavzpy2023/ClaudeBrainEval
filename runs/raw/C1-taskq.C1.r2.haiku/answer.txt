@@ -1,0 +1,7 @@
+`taskq list` now takes `--limit N`, with or without `--json`. It shows at most N tasks in insertion order, and a value below 1 is a usage error with exit status 2. The full suite passes (28 tests, including 3 new ones), and a manual `taskq list --limit 0` exits 2 with the message `argument --limit: must be at least 1: 0`.
+
+Changes:
+- **`taskq/cli.py`**: `--limit` is parsed by a `_positive_int` type, so argparse handles the usage error. A small `_listed` helper slices the rows from `repo.list_tasks()`, which already returns them in insertion order. Both the plain and `--json` output paths use it.
+- **`tests/test_cli.py`**: tests for `--limit` on plain output, on `--json`, and for values 0 and -3 exiting 2.
+
+I didn't change `repository.py`. The limit is applied after the full list is fetched, so a `LIMIT` in SQL would be the next step if the table gets large. Nothing is committed.

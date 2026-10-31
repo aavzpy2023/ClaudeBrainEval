@@ -1,0 +1,8 @@
+**No, auto-detection has not been decided, and no one owns the decision.**
+
+- The code says so directly. `main.go:17-19` has a TODO marked "open question, NO OWNER." It states that auto-detection is undecided and deliberately not implemented, and that `--delim` stays explicit with a comma default. Nothing in the code or the project notes names a person or role who will decide.
+- Current behavior: `--delim` defaults to `,` and `\t` means tab. csvtool never guesses the delimiter.
+
+To settle it, someone with authority over the project needs to decide between keeping the explicit flag and adding detection. If you want, I can add a short decision note next to that TODO, or record who should own the call.
+
+Also, the project notes I was given may be out of date. They say the default is strict parsing and that missing columns exit 2. The git log shows newer commits, `f19e074 Parse leniently by default` and `9cb15b0 Exit with status 3 for a missing column`, that contradict that. I did not check the code behind those commits, so verify them before relying on either version.

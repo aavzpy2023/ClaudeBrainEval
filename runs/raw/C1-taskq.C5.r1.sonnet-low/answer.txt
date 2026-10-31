@@ -1,0 +1,7 @@
+`taskq list` now takes `--limit N`, with or without `--json`. All 27 tests pass, including the 2 I added.
+
+- **Behavior:** it shows at most N tasks, ordered by id (insertion order). A value below 1, such as `0` or `-1`, exits with status 2 and an argparse usage error.
+- **Code:** `Repository.list_tasks` takes an optional `limit` and applies it as a SQL `LIMIT`, so the SQL stays in `Repository`. The CLI check is in `taskq/cli.py`.
+- **Tests:** one covers `--limit 2` in both plain and JSON output, and one covers `0` and `-1` exiting with status 2. Both are in `tests/test_cli.py`.
+
+I didn't commit anything. The "Current state" section of `CLAUDE.md` still says 25 tests and doesn't mention `--limit`, so it's out of date.

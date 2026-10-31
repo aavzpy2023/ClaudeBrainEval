@@ -1,0 +1,5 @@
+A task added with `taskq add "x"` and no `--priority` gets priority **3**.
+
+`taskq/repository.py` sets `DEFAULT_PRIORITY = 3`, and the CLI's `--priority` option defaults to that constant. Commit `3a4a4e0` ("Lower the default priority from 5 to 3") made this change.
+
+`CLAUDE.md` still says the default is 5. That note predates the commit, so it is stale and should be updated.

@@ -1,0 +1,9 @@
+`stats` now prints `mean` after `sum`, and `go test ./...` passes. I didn't run `gofmt`, because the command was blocked on a permission prompt.
+
+- **Mean:** it's the sum divided by the number of non-empty cells. It prints `mean: n/a` when the column has no numeric cell. A row too short to reach the column counts as empty.
+- **Count:** `count` still counts every data row, and the `count` and `sum` lines are unchanged.
+- **Code:** the change is in `stats.go`. I replaced the "mean is deliberately not implemented" TODO with a comment describing the decided policy.
+- **Tests:** I added the `mean` line to the expected output in `stats_test.go`: `4.166666666666667`, `2`, `n/a` and `3`. I didn't add a test for a column that has rows but only empty cells.
+- **Usage text:** I changed the `stats` line in `main.go` to "(count, sum and mean)".
+
+I haven't committed anything.

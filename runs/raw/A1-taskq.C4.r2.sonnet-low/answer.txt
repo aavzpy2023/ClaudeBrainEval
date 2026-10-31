@@ -1,0 +1,7 @@
+**The fix:** `Repository.claim` now runs `BEGIN IMMEDIATE` before its SELECT, so the read and the "mark as running" update happen under one write lock. The fix is commit `3b07992`.
+
+**Why it happened:** Python's `sqlite3` module doesn't open a transaction before a SELECT. It only starts one implicitly before a data-modifying statement. Two workers could both run the SELECT and see the same pending task. Each then did its UPDATE, so both were told they had claimed it. That is a check-then-act race. `BEGIN IMMEDIATE` takes SQLite's write lock up front, so the second worker waits until the first has marked the task running, and then sees the next task.
+
+**Rejected alternative:** a separate lock file to serialize claims. The user chose not to add one. SQLite's own locking already provides the mutual exclusion, so a lock file would add another moving part and fit poorly with the standard-library-only, no-extra-services approach.
+
+I took this from the project's recorded decision notes and didn't re-read the code or the commit diff in this session.

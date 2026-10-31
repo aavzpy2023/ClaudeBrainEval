@@ -1,0 +1,14 @@
+DELETE `/notes/:id` returns **404** with `{ "error": "Note not found" }` when the note does not exist. It returns 204 only when a note was actually deleted.
+
+This is in `src/server.ts:94-98`:
+
+```ts
+if (req.method === 'DELETE') {
+  // Strict: 404 when the note does not exist, so clients notice stale ids.
+  if (!store.delete(id)) return sendJson(res, 404, { error: 'Note not found' });
+  res.writeHead(204);
+  return res.end();
+}
+```
+
+Commit `cfa5650` changed this from the earlier idempotent behavior (always 204). The session digest I was given still says DELETE is idempotent, so it is out of date on this point.

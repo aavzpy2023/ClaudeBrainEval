@@ -1,0 +1,9 @@
+`createStore` now recovers from an unparseable `NOTES_FILE`: it moves the file to `<file>.corrupt` and starts with an empty store instead of throwing. `node --test` passes all 29 tests, including a new one for this case.
+
+Changes:
+- **`src/store.ts`**: `load` wraps the `JSON.parse` in a try/catch. On failure it renames the file to `${file}.corrupt` and returns `[]`.
+- **`test/persistence.test.ts`**: a new test writes a truncated JSON file, checks that the store is empty, checks that the original content now sits in `.corrupt`, and checks that the original path is gone.
+
+Scope: only parse failures are handled. A file that parses but isn't an array, or a read error such as a permissions problem, still throws. Say if you want those covered too.
+
+The known-issues list in the project notes still lists the corrupt-file crash as open. Once you've reviewed this, that item can be marked done. I haven't committed anything.

@@ -1,0 +1,8 @@
+No. According to the project history, automatic delimiter detection was decided against. `--delim` defaults to comma (`\t` means tab) and applies to both input and output, with no auto-detection.
+
+The open questions are different ones, and nobody owns them:
+
+- **Empty-cell policy and `mean`.** Whether to skip or zero empty cells is undecided and has no owner. That is why `mean` isn't implemented.
+- **Final JSON format.** The choice between JSON Lines and a single array is still open. `head --format json` uses JSON Lines for now.
+
+I'm going from the saved project digest, not from the code. I haven't checked the repo for a later change.

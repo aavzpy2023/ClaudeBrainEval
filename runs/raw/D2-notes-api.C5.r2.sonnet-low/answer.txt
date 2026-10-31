@@ -1,0 +1,5 @@
+`DELETE /notes/:id` answers **404** with `{"error":"Note not found"}` when the note doesn't exist. It answers 204 with no body when the note existed and was deleted. You can see this in `src/server.ts:94-99`.
+
+`CLAUDE.md` is out of date on this point. It says DELETE is idempotent and returns 204. Commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist") changed that. The code comment there says the 404 is so clients notice stale ids.
+
+I didn't run the tests. If `test/notes.test.ts` still expects 204 for an unknown id, it will fail.

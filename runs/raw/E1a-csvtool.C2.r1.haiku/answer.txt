@@ -1,0 +1,5 @@
+It hasn't been decided, and no one is recorded as responsible for deciding it.
+
+The code is the most direct evidence. `main.go:17-19` has a TODO marked "open question, NO OWNER" that says auto-detection "has NOT been decided and is deliberately not implemented." Until someone decides, `--delim` is always explicit and defaults to a comma. The comment also tells contributors not to add detection.
+
+My memory notes list "no auto-detection" under decisions, which conflicts with that TODO. The TODO is the more specific and more recent statement, so I'd treat the question as open. Since no owner is named, you'd need to assign it, or decide it yourself. If you decide against detection, the TODO can become a short rationale comment. If you decide for it, that's a new feature to design, including how to handle ambiguous files.

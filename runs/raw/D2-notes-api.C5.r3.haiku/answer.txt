@@ -1,0 +1,14 @@
+DELETE on a missing note returns **404** with the body `{"error":"Note not found"}`. The handler is at `src/server.ts:96`:
+
+```ts
+if (req.method === 'DELETE') {
+  // Strict: 404 when the note does not exist, so clients notice stale ids.
+  if (!store.delete(id)) return sendJson(res, 404, { error: 'Note not found' });
+  res.writeHead(204);
+  return res.end();
+}
+```
+
+This contradicts `CLAUDE.md`, which says "DELETE is idempotent and returns 204." The code matches commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist"). That commit is older than HEAD `252876d` ("Add project notes"), so the note was written after the change but still describes the old behavior. I haven't run the tests to check whether any of them assert the 204 case.
+
+I didn't change anything. If the strict 404 is the intended behavior, `CLAUDE.md` should be corrected. If idempotent 204 is intended, the handler and tests need to change.

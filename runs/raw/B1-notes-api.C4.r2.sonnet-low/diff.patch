@@ -1,0 +1,48 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..0780e30 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -26,7 +26,15 @@ export type NoteStore = {
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  try {
++    const parsed = JSON.parse(readFileSync(file, 'utf8'));
++    if (!Array.isArray(parsed)) throw new Error('not an array');
++    return parsed as StoredNote[];
++  } catch {
++    // Unreadable file: keep it for inspection and start empty rather than failing startup.
++    renameSync(file, `${file}.corrupt`);
++    return [];
++  }
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..1a0fff9 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -1,6 +1,6 @@
+ import { after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
++import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import { createStore } from '../src/store.ts';
+@@ -10,6 +10,14 @@ after(() => rmSync(dir, { recursive: true, force: true }));
+ const fileIn = (name: string) => join(dir, name);
+ 
+ describe('note store persistence', () => {
++  it('moves a corrupt file aside and starts empty', () => {
++    const file = fileIn('corrupt.json');
++    writeFileSync(file, '{not json');
++    assert.deepEqual(createStore(undefined, file).list(), []);
++    assert.equal(readFileSync(`${file}.corrupt`, 'utf8'), '{not json');
++    assert.equal(existsSync(file), false);
++  });
++
+   it('starts empty when the file does not exist yet', () => {
+     assert.deepEqual(createStore(undefined, fileIn('missing.json')).list(), []);
+   });

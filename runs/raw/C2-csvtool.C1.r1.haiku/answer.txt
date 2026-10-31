@@ -1,0 +1,11 @@
+I added `csvtool columns <file>`, which prints the header's column names one per line. `go test ./...` and `go vet` pass, including the new tests.
+
+- **`Columns` in `csvtool.go`** reads only the header and writes each name followed by a newline. Empty input prints nothing and returns no error.
+- **CLI in `main.go`** follows the same pattern as the other subcommands. It accepts `-` for stdin, `--delim`, and `--lazy-quotes`, and rejects `--format json` as a usage error (exit 2). I also added a `columns` line to the usage text.
+- **Tests in `columns_test.go`** cover a header-only file, a header with no rows, a quoted name containing a comma, empty input, a tab delimiter, and lazy versus strict quotes.
+
+Two things I did not verify. I could not run `gofmt -l .`, because the sandbox blocked that command, so formatting is unchecked. I also did not run the built binary against stdin or a missing file, for the same reason; the tests call `Columns` directly, and the stdin path goes through the existing `open` helper.
+
+Output is one name per line, so a header name that itself contains a newline will print across two lines. I left that as is.
+
+I have not committed anything. The changes are in `csvtool.go`, `main.go`, and the new `columns_test.go`.

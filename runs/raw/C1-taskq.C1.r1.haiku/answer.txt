@@ -1,0 +1,8 @@
+`taskq list --limit N` is in place and works with and without `--json`. The full suite passes (28 tests, including 3 new ones), and I committed it as `be0655b` on `main`.
+
+- **Behavior:** the list shows at most N tasks in insertion order. Without `--limit`, output is unchanged.
+- **Usage error:** `--limit 0` and negative values exit with status 2 and an argparse message, the same as other argument errors.
+- **Implementation:** `Repository.list_tasks()` takes an optional `limit` and passes it to SQL as `LIMIT`, so the database returns only the rows needed. The validation is a small `_positive_int` helper in `taskq/cli.py`.
+- **Tests:** added in `tests/test_cli.py` for the plain limited list, the limited `--json` list, and the usage error for `0` and `-3`.
+
+I didn't run `taskq list --limit 0` by hand against your real database, because that would have opened `~/.taskq/queue.db`. The usage-error test covers the same path.

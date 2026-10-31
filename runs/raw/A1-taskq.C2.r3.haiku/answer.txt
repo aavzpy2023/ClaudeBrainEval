@@ -1,0 +1,12 @@
+**Short answer:** Two workers could both read the same pending row before either marked it running. The fix, in commit `3b07992`, opens the claim transaction with `BEGIN IMMEDIATE` before the SELECT. I couldn't find a documented rejected alternative for this bug in the repo.
+
+**Why it happened:** `claim()` ran its SELECT and UPDATE as separate steps, and the SELECT wasn't inside a transaction. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT ran without holding any lock. Worker A and worker B could both SELECT the same pending row. Both then ran the UPDATE and both returned the task.
+
+**The fix:** In `taskq/repository.py:120-152`, `claim()` now runs `BEGIN IMMEDIATE` before the SELECT. That takes the write lock first. A second worker blocks until the first commits, then sees the row as `running` and skips it. The commit also adds a regression test that uses a two-thread setup and an `_after_select_hook` sleep to force the race. The test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** The memory digest says a lock file was considered and rejected at the user's choice. I couldn't verify that. Neither the commit message nor the code mentions it, and grep finds no lock-file or flock notes. Treat it as unconfirmed unless you can point me to where it was decided.
+
+**Stale details in the digest:** The digest is out of date in a few places, so don't rely on it for current values:
+- The commit touched `taskq/storage.py`, which no longer exists. SQL moved into `Repository` in `3f22710`.
+- The lease is 60 seconds in the current code (`LEASE_SECONDS = 60`), but later commits changed it (`b0fb870` doubled it to 120 s). The current value in `repository.py` is 60, so one of those commits may have been reverted or the constant may not match the history. Check before relying on it.
+- The digest says max 3 attempts. Commit `66d3f6f` changed that to 5. I didn't verify the current value.

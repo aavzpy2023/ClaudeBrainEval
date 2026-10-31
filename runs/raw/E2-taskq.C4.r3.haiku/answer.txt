@@ -1,0 +1,17 @@
+taskq upgrades an old database in place. Each time a connection opens, `Repository._connect()` (`taskq/repository.py:53`) does the following:
+
+1. `CREATE TABLE IF NOT EXISTS tasks (id, payload)` creates the original table if the file is empty.
+2. `PRAGMA table_info(tasks)` lists the existing columns.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...` with the default the code expects.
+
+Rows written by the old version get sensible values. For example, `priority` defaults to 5, `status` to `'pending'`, and `attempts` to 0. `test_migrates_old_schema` (`tests/test_repository.py:92`) covers this: it creates a bare two-column table, inserts a row, and checks that `claim` returns it and `list_tasks` shows priority 5.
+
+There are no version numbers or migration files. The check is per column, so it is idempotent and runs on every connect, and it adds only what is missing.
+
+Weak spots:
+
+- **Concurrent first opens can fail.** Two processes that open an old database at the same moment can both see a column as missing. The second `ALTER` then raises `duplicate column name`, and that process errors out. The next open works, so this is a one-time startup failure rather than data loss. The test does not cover it.
+- **Migration is not one transaction.** The `ALTER`s run in autocommit mode, so a crash partway through leaves some columns added. The per-column check repairs this on the next open.
+- **Old files at the previous default path are not found.** The default moved to `~/.taskq/queue.db`, and the code does not migrate a `./taskq.db` file from the old location. Users need to set `TASKQ_DB` to point at it.
+
+I read the code and the test but did not run the test suite.

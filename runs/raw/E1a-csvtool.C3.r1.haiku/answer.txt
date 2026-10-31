@@ -1,0 +1,5 @@
+**No, it hasn't been decided, and nobody owns the decision.**
+
+The code has no auto-detection. `--delim` is always explicit and defaults to a comma. The TODO above `delimFlag` in `main.go:17` marks it as an open question with "NO OWNER", and tells contributors not to add detection until it's settled.
+
+The project notes say the same thing: the current behavior is an explicit `--delim` flag with no detection. I didn't find any record of who should make the call, so it would need someone to be named before it can be resolved.

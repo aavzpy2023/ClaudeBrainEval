@@ -1,0 +1,5 @@
+The task gets priority **3**. `DEFAULT_PRIORITY = 3` is set in `taskq/repository.py:32`, and the `--priority` flag in `taskq/cli.py:28` defaults to that constant.
+
+The comment at `taskq/repository.py:27` still says "default 5". That text is stale. Commit `3a4a4e0` lowered the default from 5 to 3 but didn't update the comment.
+
+Priority runs 0–9, and 0 is the most urgent.

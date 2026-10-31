@@ -1,0 +1,21 @@
+I added the `columns` subcommand. The Go tests pass, but I could not check the CLI by hand because the sandbox blocked the piped shell commands.
+
+**What changed**
+
+- **`columns.go` (new):** `Columns(r, w, delim, lazy)` reads the header row with `encoding/csv`, honouring the delimiter and lazy-quotes settings, and prints each name on its own line. Empty input prints nothing and returns no error.
+- **`main.go`:** added a `columns` case that accepts `--delim`, `--lazy-quotes` and `--format` like the other subcommands, plus `-` for standard input via the existing `open()` helper. I also added `runColumns` and a usage line.
+- **`columns_test.go` (new):** covers header output, a custom tab delimiter, lazy quotes (strict parsing rejects a bare quote, lazy parsing accepts it), and empty input.
+
+**Verification**
+
+- `go test ./...` passes.
+- `go vet ./...` passes with no output.
+- I did not run `gofmt -l .`, so formatting is unchecked.
+- I did not run the built binary against stdin or empty input.
+
+**Choices I made**
+
+- A name containing a newline is printed raw, so it will span two lines. This is the simplest reading of "one per line"; say if you want quoting instead.
+- `--format` is accepted but only `csv` is meaningful, which matches how the other non-`head` subcommands treat it.
+
+I have not committed anything.

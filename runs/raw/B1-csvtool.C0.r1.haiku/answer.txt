@@ -1,0 +1,10 @@
+`stats` now prints a `mean:` line after `sum:`. The full test suite passes and `go vet` is clean. I did not run `gofmt`; the shell blocked that command, so the formatting of the edited files is unchecked.
+
+Mean is the sum divided by the number of non-empty numeric cells. `count` still counts every data row. If the column has no numeric cell, the line reads `mean: n/a`. Example output for `1,2 / 3, / 5,4`: `count: 3`, `sum: 6`, `mean: 3`.
+
+Changes:
+- **`stats.go`**: tracks the number of numeric cells and prints the `mean` line. I also replaced the "do not add mean" TODO in the doc comment with a description of the new behaviour.
+- **`main.go`**: the usage line now says `(count, sum and mean)`.
+- **`stats_test.go`**: updated the expected output in the count/sum, empty-cell, no-rows and delimiter tests. Added tests for mean skipping empty cells and for an all-empty column giving `n/a`.
+
+I did not commit anything.

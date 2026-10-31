@@ -1,0 +1,6 @@
+No. Whether csvtool should detect the delimiter automatically is still an open question, and nobody owns it.
+
+- **In the code:** `main.go:17` has a `TODO(open question, NO OWNER)` about auto-detecting the delimiter. It also says not to add detection for now. `--delim` is always explicit and defaults to a comma.
+- **In the history:** the commit that added `--delim` (1004441) says detection "is still an open question with no owner" and was deliberately left out.
+
+No one is named as responsible for deciding. The commits are all by one author (aavzpy2023), but none of them claims this decision. Someone needs to be assigned to it, or you could make the call yourself.

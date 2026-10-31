@@ -1,0 +1,9 @@
+`createStore` now recovers from an unparseable `NOTES_FILE`. It moves the bad file to `<file>.corrupt` and starts with an empty store, so the server no longer crashes at startup. `node --test` passes all 29 tests, including a new one for this case.
+
+The change is in `src/store.ts`: `load` wraps the `JSON.parse` in a try/catch and renames the file on failure. The new test in `test/persistence.test.ts` writes a truncated JSON file and checks that the store is empty, the original content sits in `.corrupt`, the original path is gone, and a later create persists normally.
+
+Two behaviours you might want to change:
+- A second corruption overwrites an existing `.corrupt` file, because `renameSync` replaces its target. Earlier backups are lost if that happens.
+- If the rename itself fails (for example, a permissions problem), the error still propagates and the server still fails to start.
+
+I haven't committed anything, and I didn't run a type-check.

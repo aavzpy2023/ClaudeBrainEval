@@ -1,0 +1,3 @@
+It answers **404** with the body `{"error":"Note not found"}`. This is in `src/server.ts:94-99`. A successful delete still returns 204.
+
+`CLAUDE.md` is out of date on this point. It says DELETE is idempotent and returns 204. The commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist") changed that, and the notes were not updated.

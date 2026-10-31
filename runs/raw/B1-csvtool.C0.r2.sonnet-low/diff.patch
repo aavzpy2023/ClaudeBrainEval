@@ -1,0 +1,95 @@
+diff --git a/main.go b/main.go
+index 3c02ac8..b6d0bdd 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count, sum and mean)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+diff --git a/stats.go b/stats.go
+index 09f2cb7..68d2a42 100644
+--- a/stats.go
++++ b/stats.go
+@@ -10,13 +10,8 @@ import (
+ // Stats streams the CSV in r and writes the count and sum of column col to w
+ // as "count: N" and "sum: S" lines. count is the number of data rows. sum adds
+ // the numeric cells; an empty cell adds nothing, and any other non-numeric cell
+-// is an error naming its row.
+-//
+-// TODO(open question, NO OWNER): `mean` is deliberately NOT implemented. It
+-// depends on an undecided empty-cell policy: skip empty cells (divide by the
+-// non-empty count) or treat them as zero (divide by count)? Nobody owns this
+-// decision yet. Do not add mean, or change how count treats empty cells, until
+-// someone decides.
++// is an error naming its row. mean is sum divided by the number of non-empty
++// cells (empty cells are skipped), or "n/a" when there are none.
+ func Stats(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
+ 	cr := csv.NewReader(r)
+ 	cr.Comma = delim
+@@ -42,6 +37,7 @@ func Stats(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
+ 	}
+ 	var count int
+ 	var sum float64
++	var nums int
+ 	for row := 2; ; row++ {
+ 		rec, err := cr.Read()
+ 		if err == io.EOF {
+@@ -59,7 +55,12 @@ func Stats(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
+ 			return fmt.Errorf("row %d: column %q: %q is not a number", row, col, rec[idx])
+ 		}
+ 		sum += v
++		nums++
+ 	}
+-	_, err = fmt.Fprintf(w, "count: %d\nsum: %s\n", count, strconv.FormatFloat(sum, 'f', -1, 64))
++	mean := "n/a"
++	if nums > 0 {
++		mean = strconv.FormatFloat(sum/float64(nums), 'f', -1, 64)
++	}
++	_, err = fmt.Fprintf(w, "count: %d\nsum: %s\nmean: %s\n", count, strconv.FormatFloat(sum, 'f', -1, 64), mean)
+ 	return err
+ }
+diff --git a/stats_test.go b/stats_test.go
+index 8fcce03..ac97590 100644
+--- a/stats_test.go
++++ b/stats_test.go
+@@ -17,7 +17,7 @@ func TestStatsCountSum(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 3\nsum: 12.5\n"; got != want {
++	if want := "count: 3\nsum: 12.5\nmean: 4.166666666666667\n"; got != want {
+ 		t.Fatalf("got %q, want %q", got, want)
+ 	}
+ }
+@@ -27,7 +27,7 @@ func TestStatsEmptyCellAddsNothingToSum(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 3\nsum: 2\n"; got != want {
++	if want := "count: 3\nsum: 2\nmean: 2\n"; got != want {
+ 		t.Fatalf("got %q, want %q", got, want)
+ 	}
+ }
+@@ -37,7 +37,7 @@ func TestStatsNoRows(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 0\nsum: 0\n"; got != want {
++	if want := "count: 0\nsum: 0\nmean: n/a\n"; got != want {
+ 		t.Fatalf("got %q, want %q", got, want)
+ 	}
+ }
+@@ -62,7 +62,7 @@ func TestStatsDelim(t *testing.T) {
+ 	if err := Stats(strings.NewReader("a;b\n1;2\n3;4\n"), &sb, "b", ';', false); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 2\nsum: 6\n"; sb.String() != want {
++	if want := "count: 2\nsum: 6\nmean: 3\n"; sb.String() != want {
+ 		t.Fatalf("got %q, want %q", sb.String(), want)
+ 	}
+ }

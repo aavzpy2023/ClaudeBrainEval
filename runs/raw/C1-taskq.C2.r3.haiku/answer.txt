@@ -1,0 +1,9 @@
+`taskq list` now takes `--limit N`, with or without `--json`. It shows at most N tasks in insertion order, and a value below 1 exits with status 2. The suite passes: 28 tests, up from 25 (the new ones cover the limit, the JSON form, and the rejected values).
+
+- **`taskq/repository.py`**: `list_tasks(limit=None)` adds a `LIMIT ?` clause when a limit is given. The query stays bound as a parameter, and the no-limit path is unchanged.
+- **`taskq/cli.py`**: `--limit` uses a small `_positive_int` type. Argparse rejects `0` and negative values with its usage error, exit status 2. The limit is passed through to both the plain and JSON output paths.
+- **Tests**: `tests/test_cli.py` checks the plain and JSON output with a limit, and that `0` and `-3` exit with status 2. `tests/test_repository.py` checks `limit=1`.
+
+I did not run `taskq list --limit 0` by hand, because the shell approval step blocked it. The exit-2 behaviour is covered by the new test instead.
+
+The changes are uncommitted, since you asked for the feature and not a commit. I left the dead-task purge TODO alone.

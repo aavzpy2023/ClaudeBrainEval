@@ -1,0 +1,14 @@
+Taskq upgrades an old database in place. There's no version number or migration history. Every time a connection is opened, `Repository._connect()` in `taskq/repository.py` (around lines 52–74) does the following:
+
+1. Runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`, so a missing table is created.
+2. Reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that's absent (`status`, `lease_expires`, `priority`, `attempts`, `not_before`), runs an `ALTER TABLE tasks ADD COLUMN` with the same default the new code expects.
+
+Rows from an old file therefore read as valid new rows: `status` is `'pending'`, `priority` is 5, `attempts` is 0, and `not_before` and `lease_expires` are NULL. The NULL `not_before` is handled by the claim query, which treats NULL as "ready now".
+
+Things to be aware of:
+
+- **The check runs on every connection, not once.** It's cheap, but there's no record that a migration ran, so a future change that can't be expressed as `ADD COLUMN` (a rename, a type change, a backfill) would need a real version mechanism.
+- **Concurrent first use could race.** If two processes open an old database at the same moment, both can see the column missing and both try the `ALTER`. The second one would fail with "duplicate column name". I haven't reproduced this. It's a plausible gap, not a confirmed bug.
+- **The digest's "not migrated" note is about a different thing.** The memory summary says `./taskq.db` files are not migrated. That refers to the old cwd-relative DB path, not to schema. Old files in the new location do get their columns added. Files at the old path are not moved to `~/.taskq/queue.db` or `TASKQ_DB`.
+- **I didn't check the tests.** I didn't find a test covering an old-schema file, so this path may be untested. A test would create a database with only `id` and `payload`, open it through `Repository`, and check the default values.

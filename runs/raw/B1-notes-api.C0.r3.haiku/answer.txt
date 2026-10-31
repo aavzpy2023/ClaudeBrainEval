@@ -1,0 +1,9 @@
+`createStore` now recovers from an unparseable NOTES_FILE: it moves the file to `<file>.corrupt` and starts with an empty store instead of throwing. The full suite passes (29/29), including a new test for this case.
+
+The change is in `src/store.ts`. `load` wraps the `JSON.parse` in a try/catch, and only `SyntaxError` triggers the recovery. Other errors are still rethrown. I also added a test to `test/persistence.test.ts` that writes a truncated JSON file, checks the store comes up empty, and checks the original content now sits in `broken.json.corrupt`.
+
+Two things to be aware of:
+- If the file parses but isn't an array (for example `{}`), it is still not handled. Only malformed JSON is covered.
+- If the rename itself fails, the error still propagates. I left that as a real I/O problem rather than hiding it.
+
+I did not commit anything.

@@ -1,0 +1,11 @@
+`createStore` now recovers from an unparseable NOTES_FILE instead of throwing. The full suite passes (29/29), including a new test for this case.
+
+In `src/store.ts`, `load` wraps the `JSON.parse` in a try/catch. On failure it renames the file to `<file>.corrupt` and returns an empty array, so the server starts with an empty store. A missing file still returns empty as before.
+
+In `test/persistence.test.ts`, a new test writes `{not json` to a file, expects an empty list, checks that the bad contents now sit in `<file>.corrupt`, and checks that the original path is gone.
+
+I scoped the recovery to parse errors only. If the file parses but isn't an array (for example `{}`), the store still fails later on the first iterator call. Say if you want that case covered too.
+
+One consequence: a second corrupt file would overwrite an existing `.corrupt` backup. I left that alone.
+
+Nothing is committed.

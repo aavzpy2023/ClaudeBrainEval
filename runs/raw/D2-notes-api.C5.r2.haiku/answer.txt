@@ -1,0 +1,5 @@
+DELETE on a missing note returns **404** with `{"error":"Note not found"}`. A successful delete returns 204 with no body.
+
+The handler is in `src/server.ts:94-99`. It calls `store.delete(id)`, which returns `false` for an unknown id, and the handler responds 404 in that case.
+
+This contradicts `CLAUDE.md`, which says "DELETE is idempotent and returns 204." The code matches commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist"), which is newer than that decision, so the code is probably right and `CLAUDE.md` is stale. I haven't checked the tests against this, and I haven't run them. Should I update the CLAUDE.md line to match the code?

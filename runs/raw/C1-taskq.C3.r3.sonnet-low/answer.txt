@@ -1,0 +1,7 @@
+`taskq list --limit N` now works with and without `--json`, and all 28 tests pass (25 existing plus 3 new).
+
+- **Ordering:** it shows at most N tasks in insertion order (by id), not priority order. The new tests check this by adding the third task with the most urgent priority and confirming it still comes last.
+- **Usage errors:** a value below 1 (`0`, `-1`) or a non-integer exits with status 2 and an argparse message. The tests cover `0`, `-1` and `x`.
+- **Without `--limit`:** `list` behaves as before.
+
+The change is in `taskq/cli.py` and `taskq/repository.py`; `Repository.list_tasks` takes an optional `limit` and applies it in SQL. I haven't committed anything.

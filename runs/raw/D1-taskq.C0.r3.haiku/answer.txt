@@ -1,0 +1,5 @@
+A task added without `--priority` gets priority **3**.
+
+The CLI passes `repository.DEFAULT_PRIORITY` as the argparse default (`taskq/cli.py:28`), and that constant is `3` (`taskq/repository.py:32`). The commit "Lower the default priority from 5 to 3" matches this.
+
+One thing is stale: the design comment at `taskq/repository.py:26-27` still says "default 5". It's a comment only, so behavior is unaffected, but it's worth updating so it doesn't mislead the next reader. I haven't changed anything.

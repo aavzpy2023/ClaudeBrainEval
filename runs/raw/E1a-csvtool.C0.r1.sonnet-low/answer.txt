@@ -1,0 +1,8 @@
+No, it hasn't been decided, and nobody is responsible for deciding it.
+
+- `main.go:17` has a comment: `TODO(open question, NO OWNER)`. It asks whether csvtool should auto-detect the delimiter. It also says `--delim` is always explicit and defaults to a comma, and tells readers not to add detection.
+- The commit that added `--delim` (1004441) says the same thing. Delimiter auto-detection is "still an open question with no owner" and is deliberately not implemented.
+
+For now, `--delim` stays explicit and defaults to a comma. Someone would have to take ownership of the question before detection gets built.
+
+The undecided item in the latest commit is separate. It's whether `head --format json` should print JSON Lines or a single JSON array.

@@ -1,0 +1,7 @@
+**No, it hasn't been decided, and no one is named as responsible.**
+
+`main.go` lines 17–19 carry a TODO that reads "open question, NO OWNER": should csvtool also auto-detect the delimiter? The comment says this is not decided and is deliberately not implemented. `--delim` is always explicit and defaults to a comma, and the comment asks that detection not be added until the question is settled.
+
+The git history doesn't change that picture. The only commits that touch delimiters are the `--delim` flag (`1004441`) and the later commits, none of which mention detection.
+
+So the current behavior is fixed: no auto-detection, and a user who has a tab- or semicolon-separated file has to pass `--delim`. Settling it means someone with authority over the tool's design has to make the call. The code doesn't say who that is. If you want, I can draft a short proposal for the decision, or add an owner to the TODO once you tell me who should own it.

@@ -1,0 +1,14 @@
+I added `csvtool columns <file>`, which prints the header's column names one per line. `go vet` and `go test ./...` pass. I did not confirm `gofmt -l` (the shell asked for approval and I didn't retry), and I did not run the built binary end to end, because the shell blocked the chained commands I tried.
+
+What changed:
+
+- **`csvtool.go`**: a new `Columns(r, w, delim, lazy)` reads the header and writes each name followed by a newline. Empty input writes nothing and returns no error, so the exit code is 0.
+- **`main.go`**: a `columns` case that takes `--delim`, `--lazy-quotes` and `-` for stdin, like the other subcommands. It rejects `--format json` with exit 2, as the other non-`head` subcommands do. The usage text lists the new command.
+- **`csvtool_test.go`**: `TestColumns` covers a basic header, header-only, empty input, tab delimiter, a quoted name containing a comma, and a ragged data row. `TestColumnsLazyQuotes` checks that a bare quote is accepted with `--lazy-quotes` and rejected in strict mode.
+
+Choices I made that you may want to change:
+
+- Names are printed raw, not CSV-quoted, so a name containing a comma prints as-is on its line. This matches "one per line" literally.
+- A header with a quoted newline prints as multiple lines.
+
+I did not commit. Nothing in `CLAUDE.md` addresses the `columns` command, so the existing project notes are unchanged.

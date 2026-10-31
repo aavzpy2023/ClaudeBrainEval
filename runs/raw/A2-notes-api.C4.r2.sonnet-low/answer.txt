@@ -1,0 +1,7 @@
+**Root cause:** The PATCH handler took the raw request body and `Object.assign`ed it onto the stored note. Any key the client sent was copied over, including `id` and `createdAt`, which the server is supposed to own.
+
+**Fix** (commit `e9d532a`, "Fix PATCH overwriting id and createdAt; reject unknown fields with 422"):
+- `store.patch` no longer merges the body. It copies only `title` and `body` onto the note.
+- `validateNotePatch` in `src/validation.ts` is now strict. PATCH accepts only `title` and `body`. An unknown field such as `id` or `createdAt`, an empty patch, or an invalid value returns 422. The unknown-field rejection was chosen over silently ignoring those fields, because silent drops hide client bugs.
+
+I took this from the project history notes for this repo and didn't re-read the code or tests, so I haven't checked it against the current source.

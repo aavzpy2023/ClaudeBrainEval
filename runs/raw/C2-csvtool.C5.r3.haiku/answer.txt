@@ -1,0 +1,17 @@
+The shell rejects chained and piped commands in this session, so I'll stop at the unit tests and not run the end-to-end check.
+
+`csvtool columns` is added. `go vet` and `go test ./...` pass, including the new tests. I did not confirm `gofmt`, and I did not run the binary against stdin or empty input because the shell would not accept the piped commands.
+
+**What changed**
+- `csvtool.go`: new `Columns(r, w, delim, lazy)`. It reads the header and writes each name on its own line. Empty input writes nothing and returns no error.
+- `main.go`: a `columns` case that accepts `--delim` and `--lazy-quotes` and `-` for stdin, plus `runColumns` and a usage line.
+- `columns_test.go`: covers the basic case, empty input, a `;` delimiter, and lazy quotes (strict rejects a bare quote, lazy accepts it).
+
+**Choices I made**
+- I did not add `--format` to `columns`, since you didn't ask for it and only `head` accepts it.
+- A missing column can't happen here, so no `ErrMissingColumn` path.
+
+**Still open**
+- `gofmt -l` on the changed files is unconfirmed. Run `gofmt -l .` before committing.
+- The end-to-end run for `-` and empty input is unverified. The unit tests cover the logic, but not the `main.go` wiring for stdin.
+- I haven't committed. The working tree has `csvtool.go`, `main.go` and the new `columns_test.go` changed.

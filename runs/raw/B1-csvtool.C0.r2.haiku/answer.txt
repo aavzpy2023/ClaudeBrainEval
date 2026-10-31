@@ -1,0 +1,12 @@
+`stats` now prints a `mean:` line after `sum`. Empty cells are skipped in the mean, and `count` still counts every data row. `go test ./...` passes.
+
+Changes:
+
+- **`stats.go`**: I added a `nonEmpty` counter alongside `sum`. The mean is `sum / nonEmpty`, formatted the same way as `sum`. It prints `mean: n/a` when there are no non-empty cells. I also replaced the old TODO comment, which said `mean` must not be added, with a description of the new behaviour.
+- **`stats_test.go`**: I updated the four expected outputs to include the mean line:
+  - `mean: 4.166666666666667` for `12.5/3`.
+  - `mean: 2` for the empty-cell case, where the mean is 2 over one non-empty cell.
+  - `mean: n/a` for the no-rows case.
+  - `mean: 3` for the delimiter test.
+
+I did not run `gofmt -l`, because the sandbox asked for approval and I did not retry it. I also did not commit, since you did not ask for a commit.

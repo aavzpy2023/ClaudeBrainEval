@@ -1,0 +1,8 @@
+No. Whether csvtool should detect the delimiter automatically hasn't been decided, and nobody owns the decision.
+
+- `main.go:17-18` has a `TODO(open question, NO OWNER)` asking whether csvtool should auto-detect the delimiter. It says this "has NOT been decided and is deliberately not implemented."
+- The commit that added `--delim` (1004441) says the same thing: it is "still an open question with no owner."
+
+Today the delimiter is set only with `--delim`. It defaults to a comma, and `\t` means tab.
+
+Someone still needs to take ownership of the decision. If you want, I can draft an issue or a short proposal for it.

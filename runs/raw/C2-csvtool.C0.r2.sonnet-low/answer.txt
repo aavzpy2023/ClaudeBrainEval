@@ -1,0 +1,11 @@
+`csvtool columns <file>` now prints the header's column names, one per line. `go test ./...` passes, including new tests for it. I couldn't run `gofmt -l .` (it needed approval) or try the command by hand on real input (the piped run was blocked too).
+
+- **Coverage:** the new tests cover a basic header, `--delim`, `--lazy-quotes` and empty input. They call the function directly. The `-` for standard input and the flag wiring in `main.go` are untested.
+- **Behaviour:** empty input prints nothing and exits 0.
+- **Parsing:** the command reads only the header row and accepts `-`, `--delim` and `--lazy-quotes`, like the other subcommands.
+- **Usage text:** I added a `columns` line to it.
+- **Extra flag:** `columns` also accepts `--format csv`, like `select`, `filter` and `stats`, and rejects `--format json`.
+
+The logic is in the new `columns.go`. The subcommand wiring and a `runColumns` helper are in `main.go`.
+
+I haven't committed anything.

@@ -1,0 +1,9 @@
+No, it hasn't been decided, and nobody owns the decision.
+
+The code is explicit about this. The comment on `delimFlag` in `main.go` (lines 17–20) reads:
+
+> TODO(open question, NO OWNER): should csvtool also auto-detect the delimiter? This has NOT been decided and is deliberately not implemented; --delim is always explicit and defaults to a comma. Do not add detection here until someone owns that decision.
+
+So the current behavior is that `--delim` is always explicit and defaults to `,`. There is no auto-detection. The comment says detection shouldn't be added until someone takes ownership of the question.
+
+I only searched the working tree. I didn't check the commit history or any issue tracker, and the Bash call to read git history was blocked, so there may be discussion elsewhere. If you want a decision, someone needs to be named as the owner. I can draft a short proposal for them to review, or leave the code as it is.

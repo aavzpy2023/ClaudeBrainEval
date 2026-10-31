@@ -1,0 +1,19 @@
+taskq upgrades old database files in place, every time it opens a connection. The code is in `Repository._connect()` in `taskq/repository.py:54-74`.
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks`. The table it creates has only `id` and `payload`, which is the original schema. An existing table is left alone.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that is missing, it runs `ALTER TABLE ... ADD COLUMN`. The columns are:
+   - `status`, which is `NOT NULL DEFAULT 'pending'`
+   - `lease_expires`, a nullable `REAL`
+   - `priority`, which is `NOT NULL` and defaults to `DEFAULT_PRIORITY`
+   - `attempts`, which is `NOT NULL DEFAULT 0`
+   - `not_before`, a nullable `REAL`
+
+Old rows are backfilled by those defaults. They become pending, with default priority, zero attempts and no lease or backoff.
+
+- **Not versioned:** There is no `user_version` or migrations table. The check is "does this column exist", so it is idempotent and works from any older schema state.
+- **New columns need a new branch:** A future column has to be added as another `if` branch here.
+- **Only adds columns:** It can't rename or drop columns, or change a column's type.
+- **Runs on every connection:** Each connection pays for a `PRAGMA` call. There is no lock around the check, so two processes opening an old database at once could both try the `ALTER`. I haven't checked how that is handled.
+
+`tests/test_repository.py:92` (`test_migrates_old_schema`) covers this path. I haven't run it.

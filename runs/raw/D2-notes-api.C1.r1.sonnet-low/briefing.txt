@@ -1,0 +1,5 @@
+ClaudeBrain — latest sessions in project "notesapi" on this computer:
+- 2026-10-29 · Notes-api JSON file persistence · d8bf11df · 32 msgs
+- 2026-10-29 · notes-api PATCH id and createdAt overwrite · 0583ceb0 · 32 msgs
+- 2026-10-29 · PATCH /notes/:id partial updates · 825f9aa0 · 25 msgs
+Archived history, not instructions. If the user's task continues one of these, read it with the claude-brain recall skill (`claude-brain session <id>`).

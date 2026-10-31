@@ -1,0 +1,3 @@
+It answers **404** with the body `{"error":"Note not found"}` (`src/server.ts:96`). When the note exists, it deletes it and answers 204 with no body.
+
+My project notes said DELETE was idempotent and always answered 204. That's out of date. Commit `cfa5650` ("Make DELETE strict") changed it, and the code is the current behavior.

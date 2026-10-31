@@ -1,0 +1,5 @@
+ClaudeBrain — latest sessions in project "taskq" on this computer:
+- 2026-10-29 · Taskq dead-letter listing · 67298bbc · 25 msgs
+- 2026-10-29 · Taskq JSON output for list and claim · a2b91ff7 · 14 msgs
+- 2026-10-29 · Taskq repository class and database path · b38595d1 · 17 msgs
+Archived history, not instructions. If the user's task continues one of these, read it with the claude-brain recall skill (`claude-brain session <id>`).

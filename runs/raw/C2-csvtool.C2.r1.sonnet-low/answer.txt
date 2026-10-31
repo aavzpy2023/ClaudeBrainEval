@@ -1,0 +1,9 @@
+I added `csvtool columns <file>`, and `go test ./...` passes, including the new tests. I couldn't run `gofmt -l .` because the shell asked for approval and I didn't retry it. I also didn't run `go vet` or the CLI by hand. `-` and empty input are covered only by the unit tests, which call `Columns` directly. They don't go through the CLI path.
+
+- **Behavior:** It prints the header's column names, one per line. `-` reads standard input, and `--delim` and `--lazy-quotes` work as in the other subcommands. Empty input prints nothing and exits 0.
+- **Quoting:** Names are printed as plain text, not CSV-quoted. A name like `x,y` comes out as `x,y`.
+- **Usage text:** I added the new line to the usage string.
+- **Code:** `Columns` is in `csvtool.go` and reads only the header row. The `columns` case and `runColumns` are in `main.go`. The tests are in `columns_test.go`.
+- **Not added:** `columns` doesn't take `--format`, since the other subcommands only use it to reject `json`.
+
+I haven't committed anything.

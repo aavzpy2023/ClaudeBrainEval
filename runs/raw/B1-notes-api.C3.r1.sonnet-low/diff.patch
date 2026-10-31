@@ -1,0 +1,43 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..b2db679 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -26,7 +26,15 @@ export type NoteStore = {
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  try {
++    const parsed = JSON.parse(readFileSync(file, 'utf8'));
++    if (!Array.isArray(parsed)) throw new Error('not an array');
++    return parsed as StoredNote[];
++  } catch {
++    // Unreadable file: keep it for inspection and start empty rather than crash at startup.
++    renameSync(file, `${file}.corrupt`);
++    return [];
++  }
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..bafbd1e 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -14,6 +14,17 @@ describe('note store persistence', () => {
+     assert.deepEqual(createStore(undefined, fileIn('missing.json')).list(), []);
+   });
+ 
++  it('moves a corrupt file aside to <file>.corrupt and starts empty', () => {
++    const file = fileIn('corrupt.json');
++    writeFileSync(file, '{not json');
++    const store = createStore(undefined, file);
++    assert.deepEqual(store.list(), []);
++    assert.ok(readdirSync(dir).includes('corrupt.json.corrupt'));
++    assert.ok(!readdirSync(dir).includes('corrupt.json'));
++    store.create({ title: 'fresh', body: '' });
++    assert.equal(createStore(undefined, file).list().length, 1);
++  });
++
+   it('reloads created, patched, updated and deleted notes', () => {
+     const file = fileIn('notes.json');
+     const a = createStore(undefined, file);

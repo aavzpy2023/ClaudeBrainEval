@@ -1,0 +1,15 @@
+I added the `columns` subcommand. The Go tests pass, but I could not run the built binary by hand: shell commands that execute it were refused by the permission check.
+
+**Changes**
+- **`columns.go`** (new): `Columns(r, w, delim, lazy)` reads the header with the same CSV reader settings as the other subcommands and prints each name on its own line. Empty input writes nothing and returns no error.
+- **`main.go`**: a `columns` case that takes `--delim` and `--lazy-quotes` like the others and accepts `-` for stdin, via the existing `open` helper. It requires exactly one file argument, otherwise it prints usage and exits 2. I also added a `columns` line to the usage string.
+- **`columns_test.go`** (new): covers a normal header, empty input, a custom delimiter with a quoted name, and `--lazy-quotes` (strict parsing fails on a bare quote, lazy parsing succeeds).
+
+**Verification**
+- `go test ./...` passes.
+- `go vet ./...` is clean.
+- The binary builds.
+- I did not run `gofmt -l`; the command was held for approval. The new files follow the existing formatting by eye.
+- I did not run the CLI manually for stdin, empty input, `--delim`, or the two-argument error case. Those paths are covered by the code and the tests, but not by a real run.
+
+I have not committed anything.

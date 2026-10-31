@@ -1,0 +1,10 @@
+I added `csvtool columns <file>`. It prints the header's column names, one per line. `go vet` and `go test` pass, including four new tests. I didn't run the CLI by hand: my manual run (tab delimiter, empty stdin) needed approval and I didn't retry it.
+
+- **Options:** it accepts `-` for standard input, `--delim` (including `\t`) and `--lazy-quotes`, like the other subcommands.
+- **Empty input:** it prints nothing and exits 0.
+- **Quoting:** names are printed raw, not CSV-quoted. For example, a header field `"a;b"` prints as `a;b`.
+- **Usage:** the usage string lists the new subcommand.
+- **Code:** the new `Columns` function is in `csvtool.go` and the CLI wiring is in `main.go`. The tests are in `columns_test.go` and cover the basic case, empty input, `--delim` with quoting, and strict versus lazy quotes.
+- **`--format`:** I left it off `columns`, since `--format json` is still undecided and the code says not to extend it to other subcommands.
+
+I haven't committed anything.

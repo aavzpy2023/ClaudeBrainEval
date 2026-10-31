@@ -1,0 +1,3 @@
+Yes. The project notes record it as decided: csvtool does not auto-detect the delimiter. Instead, `--delim` is an explicit flag on all subcommands. It defaults to comma, `\t` means tab, and it applies to both input and output. The commit "Add --delim flag to all subcommands" implements it.
+
+The notes don't name a person who made or owns that decision. They only record it as a decision. The only item they describe as having no owner is the empty-cell policy for `mean`. I took this from the session notes and didn't re-check the code.

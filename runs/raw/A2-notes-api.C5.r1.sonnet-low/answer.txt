@@ -1,0 +1,7 @@
+**Root cause:** PATCH took the raw request body and `Object.assign`ed it onto the stored note. Because nothing filtered the fields, a client could send `id` or `createdAt` and overwrite them.
+
+**Fix** (commit `26cc749` per the project notes, shown as `e9d532a` in the git log):
+- `store.patch` now copies only `title` and `body` onto the note.
+- PATCH validation is strict (`validateNotePatch`). Any other field, an empty patch, or an invalid value returns 422. Unknown fields are rejected rather than silently dropped, because silent drops hide client bugs.
+
+This comes from `CLAUDE.md`. I haven't opened the source to check it.

@@ -1,0 +1,10 @@
+`stats` now prints a `mean:` line after `sum:`. It is the sum divided by the number of non-empty numeric cells, and it prints `mean: n/a` when the column has no numeric cell. `count` still counts every data row.
+
+Changes, all in `stats.go` and `stats_test.go`:
+- **`stats.go`:** added a `numeric` counter that increments only for non-empty cells. The output format follows the existing lines (`strconv.FormatFloat(..., 'f', -1, 64)`). I also removed the old "do not add mean" TODO and updated the doc comment.
+- **Updated expectations:** `TestStatsCountSum`, `TestStatsEmptyCellAddsNothingToSum`, `TestStatsNoRows` and `TestStatsDelim` now include the `mean:` line.
+- **New tests:** `TestStatsMeanSkipsEmptyCells` (empty cells are excluded from the divisor) and `TestStatsMeanNAWhenNoNumericCell` (`mean: n/a`).
+
+`go vet ./...` and `go test ./...` both pass. I did not run `gofmt -l`, because the shell asked for approval and I did not retry it. Run `gofmt -l .` before committing.
+
+I did not commit. The branch has no commit for this change yet.

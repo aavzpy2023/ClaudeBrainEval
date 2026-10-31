@@ -1,0 +1,16 @@
+taskq migrates old databases on every connection, in `Repository._connect()` (`taskq/repository.py:57-74`).
+
+Each time a connection opens, it:
+
+1. Runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`, which creates the base table if the file is empty.
+2. Reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that is missing (`status`, `lease_expires`, `priority`, `attempts`, `not_before`), runs `ALTER TABLE tasks ADD COLUMN ...`. Columns that already exist are skipped.
+
+Existing rows get the column defaults. `status` becomes `'pending'`, `attempts` becomes `0`, and `priority` becomes `DEFAULT_PRIORITY`. `lease_expires` and `not_before` are NULL.
+
+`tests/test_repository.py:92` (`test_migrates_old_schema`) covers this. It creates a bare two-column table with one row, claims that row, and checks that `list_tasks()` reports the default priority of 5.
+
+Two things to be aware of:
+
+- **No version tracking.** `SCHEMA_VERSION = 1` in `taskq/cli.py:11` is only used in JSON output. It doesn't drive migrations, so the code checks column by column instead of by version. That works for adding columns but would not handle renames, drops, or changed constraints.
+- **Possible race on first open.** Two processes that open an old database at the same moment can both see a column as missing and both run the `ALTER`. The second one would fail with "duplicate column name". I haven't verified this. The race is unlikely because it only happens on the first open of an old file, but a `BEGIN IMMEDIATE` around the check would close it.

@@ -1,0 +1,106 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..2f1c24a 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -15,6 +15,16 @@ def _print_json(doc):
+     print(json.dumps({"v": SCHEMA_VERSION, **doc}))
+ 
+ 
++def _positive_int(value):
++    try:
++        n = int(value)
++    except ValueError:
++        raise argparse.ArgumentTypeError(f"invalid int value: {value!r}")
++    if n < 1:
++        raise argparse.ArgumentTypeError("must be at least 1")
++    return n
++
++
+ def main(argv=None):
+     parser = argparse.ArgumentParser(prog="taskq")
+     sub = parser.add_subparsers(dest="command", required=True)
+@@ -30,6 +40,12 @@ def main(argv=None):
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
++    ls.add_argument(
++        "--limit",
++        type=_positive_int,
++        metavar="N",
++        help="show at most N tasks (N >= 1)",
++    )
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -70,11 +86,11 @@ def main(argv=None):
+             {
+                 "tasks": [
+                     {"id": i, "priority": p, "text": t}
+-                    for i, p, t in repo.list_tasks()
++                    for i, p, t in repo.list_tasks(args.limit)
+                 ]
+             }
+         )
+     else:
+-        for task_id, priority, payload in repo.list_tasks():
++        for task_id, priority, payload in repo.list_tasks(args.limit):
+             print(f"{task_id}\t{priority}\t{payload}")
+     return 0
+diff --git a/taskq/repository.py b/taskq/repository.py
+index 8247752..f0127a8 100644
+--- a/taskq/repository.py
++++ b/taskq/repository.py
+@@ -93,11 +93,16 @@ class Repository:
+             conn.close()
+ 
+ 
+-    def list_tasks(self):
+-        """Return all tasks as (id, priority, payload) tuples in insertion order."""
++    def list_tasks(self, limit=None):
++        """Return tasks as (id, priority, payload) tuples in insertion order.
++
++        At most `limit` tasks are returned when it is given.
++        """
+         conn = self._connect()
+         try:
+-            return conn.execute("SELECT id, priority, payload FROM tasks ORDER BY id"
++            return conn.execute(
++                "SELECT id, priority, payload FROM tasks ORDER BY id LIMIT ?",
++                (-1 if limit is None else limit,),
+             ).fetchall()
+         finally:
+             conn.close()
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..82eed35 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -72,6 +72,29 @@ class CliTest(unittest.TestCase):
+                     self.assertEqual(cli.main(["dead"]), 0)
+         self.assertEqual(out.getvalue(), "1\tdoomed\n")
+ 
++    def test_list_limit(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    for text in ("a", "b", "c"):
++                        cli.main(["add", text])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--limit", "2"])
++                self.assertEqual(out.getvalue(), "1\t5\ta\n2\t5\tb\n")
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--limit", "2", "--json"])
++                tasks = json.loads(out.getvalue())["tasks"]
++                self.assertEqual([t["text"] for t in tasks], ["a", "b"])
++
++    def test_list_rejects_limit_below_one(self):
++        for bad in ("0", "-1"):
++            with contextlib.redirect_stderr(io.StringIO()):
++                with self.assertRaises(SystemExit) as cm:
++                    cli.main(["list", "--limit", bad])
++            self.assertEqual(cm.exception.code, 2)
++
+     def test_list_json(self):
+         with tempfile.TemporaryDirectory() as d:
+             with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):

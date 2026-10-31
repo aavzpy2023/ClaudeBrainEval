@@ -1,0 +1,7 @@
+`stats` now prints a `mean:` line after `sum`, computed over the non-empty numeric cells. `go test ./...` passes.
+
+- **`stats.go`**: I added a counter for numeric cells. `mean` is `sum / numeric`, or `n/a` when there are none. `count` still counts every data row. The doc comment's TODO saying `mean` must not be added is replaced with the decided behavior.
+- **`stats_test.go`**: I updated the expected output in the existing tests that now include a `mean:` line. I also added two tests: one checking that empty cells are skipped in the mean, and one for a column with no numeric cell (`mean: n/a`).
+- **`main.go`**: I updated the usage string and the `-c` flag help to mention the mean. These weren't in your request, so say if you'd rather keep them unchanged.
+
+I haven't run `gofmt` or `go vet` because the sandbox asked for approval on that command. The edits are small and follow the existing style, but a `gofmt -l .` run would confirm formatting. I haven't committed anything.

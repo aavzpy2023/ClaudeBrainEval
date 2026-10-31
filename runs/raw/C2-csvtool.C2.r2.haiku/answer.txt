@@ -1,0 +1,15 @@
+I added `csvtool columns <file>`. It prints the header names one per line, accepts `-` for stdin, and honors `--delim` and `--lazy-quotes`. Empty input prints nothing and exits 0. I did not commit.
+
+Changes:
+- **`columns.go`**: new `Columns(r, w, delim, lazy)`, streaming the header row only.
+- **`columns_test.go`**: tests for the normal case, empty input, and tab delimiter.
+- **`main.go`**: the `columns` case, a `runColumns` helper, and a usage line.
+
+Verification:
+- `go vet ./...` is clean.
+- `go test ./...` passes.
+- `go run . columns --delim ';' -` on `a;b` printed `a` and `b`.
+- `go run . columns /dev/null` printed nothing.
+- `gofmt -l .` was refused by the sandbox as needing approval, so formatting is not confirmed. Run `gofmt -l .` yourself before committing.
+
+I did not add a `--format` option to `columns`, since the JSON format is still undecided and only `head` supports it.

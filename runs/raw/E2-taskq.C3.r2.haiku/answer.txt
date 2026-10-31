@@ -1,0 +1,15 @@
+taskq upgrades the schema in place, on every connection, when it opens the database. It does not use a version number or a separate migration step.
+
+In `taskq/repository.py`, `Repository._connect()` does three things each time it opens the file:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. That creates the original table if the file is empty, and does nothing if the table exists.
+2. It reads the column names with `PRAGMA table_info(tasks)`.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...` with the same default the newer code expects. Existing rows get those defaults, so an old task becomes a pending task with priority 5 and zero attempts.
+
+`tests/test_repository.py::test_migrates_old_schema` covers this. It creates a bare `(id, payload)` table, inserts a row, and checks that `claim` returns it and `list_tasks` reports it with priority 5. I haven't run the test suite for this answer, so that result is from reading the test, not from running it.
+
+Three things to keep in mind:
+
+- **Only the database file is migrated.** If an older install wrote to `./taskq.db` in the current directory, that file is not moved or read by the new default path (`~/.taskq/queue.db`). Point `TASKQ_DB` at the old file to use it.
+- **Migration is not guarded against concurrent first opens.** Two processes that open an old database at the same moment could both see a column as missing. The second `ALTER` would then fail with "duplicate column name". I haven't tested this. A fix would be to run the migration inside one `BEGIN IMMEDIATE` transaction, or to add a `PRAGMA user_version` check.
+- **A database from a newer version is not detected.** If a newer build added columns that this build doesn't know about, this code ignores them and does not refuse to open the file.

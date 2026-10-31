@@ -1,0 +1,7 @@
+`mean` is now printed after `sum` in `stats`. `go vet` and `go test ./...` pass.
+
+- **Behaviour:** `mean` is the sum divided by the number of non-empty numeric cells. `count` still counts every data row. If the column has no non-empty cell, the line is `mean: n/a`.
+- **Code:** `stats.go` tracks the non-empty count and removes the open-question TODO, since the policy is now decided. The usage line and the `-c` flag help in `main.go` now mention mean.
+- **Tests:** I updated the expected output in the four existing stats tests that changed. I added `TestStatsNoNumericCell` for the `n/a` case. The test names `TestStatsEmptyCellAddsNothingToSum` and `TestStatsEmptyCellSkipped` changed too, to match the new policy.
+
+I did not run `gofmt -l`: the shell asked for approval and I did not get it. The code was written to match the surrounding style, but formatting is unconfirmed. I also did not commit.

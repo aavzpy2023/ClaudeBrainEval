@@ -1,0 +1,3 @@
+Yes, it's decided: no auto-detection. The project notes say `--delim` (default comma, `\t` for tab) applies to both input and output, and that there is no auto-detection.
+
+The notes don't say who made that call. They're tagged `[auto]` and don't name an owner. The `--delim` flag arrived in commit `1004441`, which may help if you want to trace it further. Unlike the `mean` policy, which is explicitly marked as having no owner, this decision isn't flagged as open. If you want auto-detection revisited, the person to ask is whoever owns the project's requirements, and I can record that owner in the notes.

@@ -1,0 +1,18 @@
+taskq migrates the file in place, every time a connection opens it. There is no version number. `Repository._connect()` (`taskq/repository.py:54-74`) does this on each call:
+
+1. `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. This creates the original shape if the file is empty.
+2. `PRAGMA table_info(tasks)` lists the existing columns.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...` with a default.
+
+Existing rows get the defaults: `status='pending'`, `priority=5` (`DEFAULT_PRIORITY`), `attempts=0`, and `NULL` for `lease_expires` and `not_before`. Old tasks are therefore claimable right away, at normal priority, with no retry history.
+
+The per-column checks mean a file that has only some of the newer columns is also handled. The test `test_migrates_old_schema` (`tests/test_repository.py:92`) covers the oldest case: a table with only `id` and `payload`. It checks that an old row can be claimed and that it lists with priority 5.
+
+Things to be aware of:
+
+- **No schema version.** Migration is driven only by column presence. If a later change needs a rename or a data rewrite, this approach will not be enough. `PRAGMA user_version` would be the natural next step.
+- **Not wrapped in a transaction.** Python's `sqlite3` does not open a transaction for DDL, so each `ALTER` commits on its own. A crash partway through leaves some columns added. The next connection finishes the job, so that is harmless.
+- **Possible race on first open.** Two processes opening an old file at the same moment could both see a column as missing. The second `ALTER` would then fail with "duplicate column name". I reasoned this from the code and did not reproduce it. I have not tested it.
+- **Old default path is not migrated.** The default DB moved from a cwd-relative `./taskq.db` to `~/.taskq/queue.db` (the commit `3f22710`). An old `./taskq.db` is ignored unless you point `TASKQ_DB` at it. Migration only applies once the file is opened.
+
+I haven't run the test suite in this session.

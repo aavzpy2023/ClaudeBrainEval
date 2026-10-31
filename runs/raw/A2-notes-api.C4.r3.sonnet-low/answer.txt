@@ -1,0 +1,7 @@
+**Root cause:** The PATCH handler took the raw request body and `Object.assign`ed it onto the stored note. A client could therefore include `id` or `createdAt` (or any other field) in the body and overwrite the note's identity and creation timestamp.
+
+**Fix** (commit `e9d532a`, "Fix PATCH overwriting id and createdAt; reject unknown fields with 422"):
+- `store.patch` now copies only `title` and `body` onto the note instead of merging the whole body.
+- PATCH validation (`validateNotePatch`) is strict. Any field other than `title` or `body`, an empty patch, or an invalid value returns 422. That way a client sending `id` or `createdAt` gets an error instead of having the field silently dropped.
+
+I'm going from the project history and my notes on it, not from re-reading the code just now. I can open `src/store.ts` and `src/validation.ts` to confirm if you'd like.

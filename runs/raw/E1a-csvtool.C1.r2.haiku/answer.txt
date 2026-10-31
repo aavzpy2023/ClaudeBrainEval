@@ -1,0 +1,8 @@
+No, it hasn't been decided, and the repo names no one responsible for deciding.
+
+- **Code:** `main.go:17-19` has a TODO marked "open question, NO OWNER". It says auto-detection "has NOT been decided and is deliberately not implemented". `--delim` is always explicit and defaults to a comma, and the code asks future work not to add detection until it is decided.
+- **History:** commit `1004441` ("Add --delim flag to all subcommands") says the same thing: auto-detection is still an open question with no owner.
+
+Nothing in the commit messages I searched shows a later decision. Commits `f19e074`, `8f1210f` and `9cb15b0` exist on another ref, not on `main`. I only searched their messages, not their diffs.
+
+So the decision needs an owner. Someone on the project would have to pick it up, and until then `--delim` stays explicit. I can draft a short proposal for whoever takes it, or open a Docs page for it if you want one.

@@ -1,0 +1,18 @@
+taskq upgrades an old database in place, one column at a time, every time a connection opens. There is no version number involved.
+
+`Repository._connect()` (`taskq/repository.py:54-74`) does three things:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. This covers a brand-new file or one that has only the original two columns.
+2. It reads `PRAGMA table_info(tasks)` and collects the existing column names.
+3. For each newer column it lacks (`status`, `lease_expires`, `priority`, `attempts`, `not_before`), it runs an `ALTER TABLE ... ADD COLUMN` with the default it needs.
+
+Existing rows therefore get `status='pending'`, `priority=5` (`DEFAULT_PRIORITY`), `attempts=0`, and NULL for `lease_expires` and `not_before`. An old task is claimable right away. The test `test_migrates_old_schema` (`tests/test_repository.py:92`) covers this: it builds a two-column table, claims the old row, and checks that it shows up with priority 5. I haven't run the suite in this session, so that result is from reading the code.
+
+Things to be aware of:
+
+- **Concurrent first open can fail.** The `ALTER` statements are not wrapped in a single transaction or guarded by a lock. If two processes open the same old database at once, both can see the column as missing, and the second `ALTER` will fail with "duplicate column name". The project chose not to use a lock file, so this is a real gap. A cheap fix would be to catch `sqlite3.OperationalError` on each ALTER and re-check the columns, or to run the migration under `BEGIN IMMEDIATE`.
+- **A partial migration is harmless.** Each column is checked on its own, so an interrupted run is finished by the next connection.
+- **The old `./taskq.db` in the working directory is not picked up.** The default path is now `~/.taskq/queue.db`, so a file left in the cwd is ignored unless you set `TASKQ_DB` to it. This matches the existing "not migrated" open issue in CLAUDE.md.
+- **Newer databases opened by older code are not handled.** The code has no version check, so an older build opening a database that has the extra columns just ignores them.
+
+If you want, I can run `python3 -m unittest` to confirm the migration test passes, or write a test for the concurrent-open race.

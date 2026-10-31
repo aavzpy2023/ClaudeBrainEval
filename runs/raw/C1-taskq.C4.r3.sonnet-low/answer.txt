@@ -1,0 +1,7 @@
+`taskq list` now takes `--limit N`, and it works with and without `--json`. All 27 tests pass, including two new ones.
+
+- **Behaviour:** it shows at most N tasks in insertion order. A value below 1, such as `0` or `-1`, is a usage error with exit status 2. A non-integer value is also a usage error.
+- **Code:** `Repository.list_tasks` in `taskq/repository.py` takes an optional `limit`, so the SQL stays in the Repository class. `taskq/cli.py` has a small `_positive_int` argparse type that rejects values below 1.
+- **Tests:** in `tests/test_cli.py`, one new test covers the limit in plain and JSON output. The other checks that `0` and `-1` exit with status 2.
+
+I haven't committed anything.

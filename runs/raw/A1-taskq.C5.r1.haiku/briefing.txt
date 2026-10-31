@@ -1,0 +1,26 @@
+[auto] Goal: taskq, a persistent task queue with CLI, Python 3 standard library only, no third-party dependencies. Tests use unittest; `python3 -m unittest` must stay green.
+
+Decisions and why:
+- Storage is SQLite (no extra services, atomic writes, survives reboot).
+- Claimed tasks get a 60 s lease (`LEASE_SECONDS`), not a heartbeat; an expired `running` task is claimable again.
+- Priority is an integer 0-9, 0 = MOST urgent, default 5. Claim order is priority, then id.
+- `claim` runs `BEGIN IMMEDIATE` before the SELECT (fixes duplicate hand-out; Python's sqlite3 doesn't open a transaction before a SELECT). No lock file, by the user's choice.
+- Retries: `fail <id>` re-queues with exponential backoff (2s, 4s, 8s). Max 3 attempts, then `dead`. No jitter (non-deterministic tests). `claim` skips tasks until `not_before`.
+- Default DB is `~/.taskq/queue.db`, overridable with `TASKQ_DB`, resolved at `Repository` creation. This supersedes the old cwd-relative path.
+- All SQL lives in `Repository`; the CLI only calls it.
+- JSON output: every JSON document has a top-level `"v": 1` (`SCHEMA_VERSION` in `taskq/cli.py`) so the format can evolve. Output is always an object, never a bare array.
+- Dead-letter: only listing is implemented. Purge and requeue are deliberately NOT done, because the purge policy (keep forever vs. expire after N days) is undecided and has no owner.
+
+Current state: 25 tests pass. Latest commit is `201960d`. Earlier commits are `6a93182` (JSON), `7f2b5c5`, `ed2b440` and `53479b5`.
+- CLI: `add [--priority N] <text>`, `list [--json]`, `claim [--json]`, `done <id>`, `fail <id>`, `dead`.
+- `list --json` prints `{"v":1,"tasks":[{id,priority,text}]}`. `claim --json` prints `{"v":1,"task":{id,text}}`, or `"task":null` with exit 1 when empty.
+- `dead` prints `id<TAB>payload`, oldest first.
+
+Files: `taskq/__init__.py`, `taskq/__main__.py`, `taskq/cli.py`, `taskq/repository.py` (`Repository(db_path=None)`: `enqueue`, `list_tasks`, `claim`, `done`, `fail`, `list_dead`; test hook `_after_select_hook`), `tests/test_repository.py`, `tests/test_cli.py`.
+
+Open issues:
+- Purge policy for dead tasks is open (marked `TODO(open question)` above `list_dead` in `taskq/repository.py`).
+- `dead` has no `--json`.
+- A late `done` after lease expiry still marks the task done.
+- `./taskq.db` files are not migrated; set `TASKQ_DB`.
+- The `list` plain format changed earlier.

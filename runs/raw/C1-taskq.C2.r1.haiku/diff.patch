@@ -1,0 +1,109 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..e2c9ca4 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -15,6 +15,13 @@ def _print_json(doc):
+     print(json.dumps({"v": SCHEMA_VERSION, **doc}))
+ 
+ 
++def _positive_int(text):
++    value = int(text)
++    if value < 1:
++        raise argparse.ArgumentTypeError(f"must be at least 1: {text}")
++    return value
++
++
+ def main(argv=None):
+     parser = argparse.ArgumentParser(prog="taskq")
+     sub = parser.add_subparsers(dest="command", required=True)
+@@ -30,6 +37,9 @@ def main(argv=None):
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
++    ls.add_argument(
++        "--limit", type=_positive_int, metavar="N", help="show at most N tasks"
++    )
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -70,11 +80,11 @@ def main(argv=None):
+             {
+                 "tasks": [
+                     {"id": i, "priority": p, "text": t}
+-                    for i, p, t in repo.list_tasks()
++                    for i, p, t in repo.list_tasks(limit=args.limit)
+                 ]
+             }
+         )
+     else:
+-        for task_id, priority, payload in repo.list_tasks():
++        for task_id, priority, payload in repo.list_tasks(limit=args.limit):
+             print(f"{task_id}\t{priority}\t{payload}")
+     return 0
+diff --git a/taskq/repository.py b/taskq/repository.py
+index 8247752..a5eb40f 100644
+--- a/taskq/repository.py
++++ b/taskq/repository.py
+@@ -93,11 +93,17 @@ class Repository:
+             conn.close()
+ 
+ 
+-    def list_tasks(self):
+-        """Return all tasks as (id, priority, payload) tuples in insertion order."""
++    def list_tasks(self, limit=None):
++        """Return tasks as (id, priority, payload) tuples in insertion order.
++
++        At most limit tasks are returned when limit is given. SQLite treats a
++        negative LIMIT as no limit, so -1 means all tasks.
++        """
+         conn = self._connect()
+         try:
+-            return conn.execute("SELECT id, priority, payload FROM tasks ORDER BY id"
++            return conn.execute(
++                "SELECT id, priority, payload FROM tasks ORDER BY id LIMIT ?",
++                (-1 if limit is None else limit,),
+             ).fetchall()
+         finally:
+             conn.close()
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..1d42ec5 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -105,3 +105,37 @@ class CliTest(unittest.TestCase):
+         first, second = map(json.loads, out.getvalue().splitlines())
+         self.assertEqual(first, {"v": 1, "task": {"id": 1, "text": "hello"}})
+         self.assertEqual(second, {"v": 1, "task": None})
++
++    def test_list_limit(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "a"])
++                    cli.main(["add", "b"])
++                    cli.main(["add", "c"])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--limit", "2"])
++        self.assertEqual(out.getvalue(), "1\t5\ta\n2\t5\tb\n")
++
++    def test_list_limit_json(self):
++        with tempfile.TemporaryDirectory() as d:
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", "a"])
++                    cli.main(["add", "b"])
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--json", "--limit", "1"])
++        self.assertEqual(
++            json.loads(out.getvalue()),
++            {"v": 1, "tasks": [{"id": 1, "priority": 5, "text": "a"}]},
++        )
++
++    def test_list_limit_rejects_below_one(self):
++        for bad in ("0", "-3"):
++            with self.subTest(limit=bad):
++                with contextlib.redirect_stderr(io.StringIO()):
++                    with self.assertRaises(SystemExit) as cm:
++                        cli.main(["list", "--limit", bad])
++                self.assertEqual(cm.exception.code, 2)

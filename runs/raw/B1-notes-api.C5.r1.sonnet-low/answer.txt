@@ -1,0 +1,7 @@
+`createStore` no longer crashes on a corrupt `NOTES_FILE`. If the file can't be parsed, it renames it to `<file>.corrupt` and starts with an empty store. `node --test` passes all 29 tests, which is the 28 existing ones plus one new one. I didn't commit anything.
+
+- **The fix:** the change is in `load` in `src/store.ts`. Valid JSON that isn't an array also counts as corrupt, since the store can't use it either. If a `<file>.corrupt` already exists, it gets overwritten.
+- **Not caught:** read errors such as permission problems still throw, because they aren't corruption.
+- **The new test:** it's in `test/persistence.test.ts`. It writes a broken file, checks the store starts empty and that `.corrupt` holds the original bytes, then checks that new writes persist and reload.
+
+I didn't update CLAUDE.md. Its open-issues list still names the corrupt-file startup crash, so you'll want to remove that line.

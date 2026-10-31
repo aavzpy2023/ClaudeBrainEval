@@ -1,0 +1,11 @@
+**Short answer:** The fix is `BEGIN IMMEDIATE` before the SELECT in `claim()`. The alternative the project rejected was a lock file.
+
+**Why it happened:** `claim()` ran its SELECT and UPDATE as separate steps, and the SELECT wasn't inside a transaction. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT ran with no lock held. Two workers could both SELECT the same pending row before either UPDATE took the write lock. Both then marked it `running` and returned it. The commit message for `3b07992` records this root cause.
+
+**How it was fixed:** `claim()` now runs `conn.execute("BEGIN IMMEDIATE")` before the SELECT (`taskq/repository.py:134`). The write lock is taken first, so a second worker waits until the first commits and then sees the task as `running`. The SELECT and UPDATE happen in one transaction. A regression test uses two threads and the `_after_select_hook` test hook to widen the race window. It fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** A lock file. The project notes in `CLAUDE.md` say "No lock file, by the user's choice." The notes record the decision but not the user's reasons.
+
+**Inconsistencies I noticed:**
+- Commit `3b07992`'s message and stat refer to `taskq/storage.py` and `tests/test_storage.py`. Those files no longer exist. The SQL moved into `taskq/repository.py` in `3f22710`.
+- `CLAUDE.md` cites the latest commit as `201960d` and earlier ones as `6a93182`, `7f2b5c5`, `ed2b440` and `53479b5`. None of those hashes appear in `git log`. The actual head is `b4c4bd5`.

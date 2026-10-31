@@ -1,0 +1,9 @@
+`createStore` now recovers from an unparseable NOTES_FILE. It moves the bad file to `<file>.corrupt`, logs a warning, and starts with an empty store, so the server boots instead of crashing. All 29 tests pass, including a new one for this case.
+
+The change is in `src/store.ts`. `load` wraps `JSON.parse` in a try/catch and only handles `SyntaxError`. Any other error, such as a permission failure on read, still throws. I also added a test to `test/persistence.test.ts` that writes `{not json`, checks that the store is empty, checks that the original content lands in `.corrupt`, and checks that the next write produces a valid file.
+
+Decisions to review:
+- **Previous `.corrupt` files are overwritten.** If the file gets corrupted twice, the first `.corrupt` copy is lost. Keeping timestamped names would avoid that, but I kept the name you specified.
+- **Valid JSON with the wrong shape is not handled.** For example, a JSON object instead of an array would still fail later. The spec covered only parse errors, so I left that alone.
+
+I did not commit anything.

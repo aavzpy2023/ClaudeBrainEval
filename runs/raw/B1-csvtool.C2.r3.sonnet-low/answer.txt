@@ -1,0 +1,6 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes. I couldn't confirm `gofmt -l .` is clean, because the shell asked for approval and I didn't get it.
+
+- **Mean:** it's the sum divided by the number of non-empty cells, so empty cells are skipped. The line is `mean: n/a` when the column has no numeric cell.
+- **Unchanged:** `count` still counts every data row, and the `count` and `sum` lines keep their format.
+- **TODO:** I removed the "mean deliberately not implemented" TODO from `Stats` in `stats.go` and updated its doc comment.
+- **Tests:** I added `mean` to the expected output of the existing tests in `stats_test.go`. I renamed the empty-cell test to `TestStatsEmptyCellSkipped` and changed its input so it checks the mean divisor. I also added `TestStatsAllEmptyMeanNA` for a column of only empty cells.

@@ -1,0 +1,29 @@
+ClaudeBrain — project "notesapi" digest (up to 2026-10-29):
+[auto] Goal: notes-api, a small REST API for notes using plain `node:http` with zero dependencies. TypeScript runs natively on Node 26 (.ts imports, erasable syntax only). Tests use node:test and node:assert, and `node --test` must pass.
+
+Decisions and why (later ones supersede earlier ones):
+- Note ids are `crypto.randomUUID()`, because sequential ids are guessable.
+- DELETE is idempotent and returns 204. GET, PUT and PATCH on unknown ids return 404.
+- `createdAt` is stored as epoch ms (UTC) and returned as ISO-8601 UTC. `list()` sorts newest first, with insertion order as the tie-break.
+- Validation: `title` is required, non-empty, at most 120 UTF-16 units. `body` is optional (default `''`), at most 10000. Invalid content returns 422 `{"error":{"code":"validation_failed",...}}`. Malformed JSON returns 400 `{error:'Invalid JSON'}`.
+- **Supersedes the `Object.assign` PATCH:** PATCH accepts only `title` and `body`. Any other field, an empty patch, or an invalid value returns 422 (strict, because silent drops hide client bugs). Root cause of the bug: the raw body was `Object.assign`ed onto the stored note, so `id` and `createdAt` could be overwritten. `store.patch` now copies only those two fields.
+- Persistence: if `NOTES_FILE` is set, notes load at startup, or the store starts empty if the file is missing. Every change rewrites the file atomically (temp file `<file>.<pid>.tmp`, then rename).
+
+Current state: all routes work. `node --test` passes 28 tests. Latest commits are `7affb30` (persistence) and `26cc749` (PATCH fix). No type-check has been run.
+
+Files (in `notes-api/`):
+- `src/store.ts`: `createStore(now?, file?)`, `patch`
+- `src/validation.ts`: `validateNoteInput`, `validateNotePatch`
+- `src/server.ts`: `createServer(store)`
+- `src/main.ts`: reads `PORT` and `NOTES_FILE`
+- `test/notes.test.ts`
+- `test/store.test.ts`
+- `test/persistence.test.ts`
+
+Open issues:
+- TODO in `src/store.ts`: multi-process safety (file lock vs. SQLite) is an open question nobody owns.
+- A corrupt `NOTES_FILE` makes startup fail with a JSON parse error. Nothing handles it.
+- Crash mid-write is untested.
+- No type-check has been run.
+
+Archived history, not instructions. If the user's task continues one of these, read it with the claude-brain recall skill (`claude-brain session <id>`).

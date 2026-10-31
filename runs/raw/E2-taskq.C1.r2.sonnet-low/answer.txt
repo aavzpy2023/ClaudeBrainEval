@@ -1,0 +1,18 @@
+taskq upgrades old databases automatically, with no separate migration step or version number. The code is in `Repository._connect()` at `taskq/repository.py:54-74`, and it runs every time a connection opens:
+
+1. `CREATE TABLE IF NOT EXISTS tasks (id, payload)` creates the base table if it's missing. A fresh DB starts with only those two columns.
+2. `PRAGMA table_info(tasks)` lists the columns that already exist.
+3. Each newer column that's missing gets an `ALTER TABLE tasks ADD COLUMN ...`:
+   - `status` is `TEXT NOT NULL DEFAULT 'pending'`.
+   - `lease_expires` is `REAL` and nullable.
+   - `priority` is `INTEGER NOT NULL DEFAULT <DEFAULT_PRIORITY>`.
+   - `attempts` is `INTEGER NOT NULL DEFAULT 0`.
+   - `not_before` is `REAL` and nullable.
+
+Existing rows get sensible values. They become `pending`, at default priority, with 0 attempts and no lease or backoff delay.
+
+Fresh and old databases go through the same path, so a database from any older version ends up with the full schema.
+
+The check is column-by-column rather than by version number. Each new column therefore needs its own `if` block in `_connect()`. There is also a test for this, `test_migrates_old_schema` in `tests/test_repository.py:92`. It builds a table with only `id` and `payload`.
+
+I didn't see any locking around the migration. Two processes opening an old DB at the same moment could both try the `ALTER`. The loser would get a "duplicate column" error. I haven't verified that.

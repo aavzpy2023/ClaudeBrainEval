@@ -1,0 +1,5 @@
+No, it hasn't been decided, and no one owns the decision.
+
+The code confirms this. In `main.go:17-20`, a TODO marked "open question, NO OWNER" says csvtool should not auto-detect the delimiter until someone takes ownership of that decision. `--delim` is always explicit and defaults to a comma. The git history has no commit that adds detection or assigns the question to anyone.
+
+The question stays open until someone with authority over the project decides whether to add auto-detection. If they do, the TODO should be replaced with that decision and its owner.

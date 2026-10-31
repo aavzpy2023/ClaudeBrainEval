@@ -1,0 +1,7 @@
+`createStore` no longer throws on a corrupt `NOTES_FILE`. It moves the file to `<file>.corrupt` and starts with an empty store. `node --test` passes all 29 tests, including the new one. I haven't committed anything.
+
+- **Fix:** the change is in `load()` in `src/store.ts`. If `JSON.parse` throws, or the parsed value isn't an array, it renames the file to `<file>.corrupt` and returns `[]`.
+- **Test:** I added a case in `test/persistence.test.ts`. It writes a bad file, then checks that the store is empty and that `.corrupt` holds the original bytes. It also checks that the original path is gone and that a later write persists normally.
+- **Overwrite:** if a `<file>.corrupt` already exists, the rename overwrites it. A second corruption loses the first corrupt file.
+- **Unchecked case:** I only handle a whole-file parse failure or a non-array. A valid JSON array with malformed note entries still loads as is.
+- **Notes:** I did not update the open-issues list in `CLAUDE.md`. It still lists the corrupt-file crash.

@@ -1,0 +1,5 @@
+DELETE /notes/:id returns **404** with the body `{"error":"Note not found"}` when the note does not exist. This is in `src/server.ts:96`, which calls `store.delete(id)` and sends the 404 when it returns `false`.
+
+The store only persists when something was actually removed (`src/store.ts:80-84`), so a failed delete changes nothing on disk.
+
+The 204 behaviour in the session digest is out of date. Commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist") replaced it. The code comment at `src/server.ts:95` gives the reason: clients should notice stale ids.

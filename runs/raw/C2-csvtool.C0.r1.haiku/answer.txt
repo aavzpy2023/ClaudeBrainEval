@@ -1,0 +1,10 @@
+I added `csvtool columns <file>`. It prints the header's column names one per line. The full test suite passes (`go test ./...`) and `go vet` is clean.
+
+Changes:
+- **`columns.go`**: new `Columns` function. It reads only the header, so it stops after one record. Empty input prints nothing and returns no error.
+- **`columns_test.go`**: tests for normal output, empty input, and `--delim` with `--lazy-quotes`. The last one also checks that a bare quote fails without `--lazy-quotes`.
+- **`main.go`**: a `columns` case that follows the same pattern as the other subcommands, so `--delim`, `--lazy-quotes` and `-` for stdin all work. The usage string now lists the command.
+
+I did not run the binary against stdin. My shell tool asked for approval on those commands, so the `-` path is verified only by reading the code. It reuses the existing `open` helper that the other subcommands already use.
+
+I did not commit. Say if you want a commit with the Co-Authored-By line.

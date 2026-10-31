@@ -1,0 +1,24 @@
+The repository migrates old databases in place, on every connection, by adding whatever columns are missing. It does not use a schema version number.
+
+The logic is in `Repository._connect()` (`taskq/repository.py:54-74`):
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. This creates the original two-column table if the file is missing, and does nothing otherwise.
+2. It reads the existing column names with `PRAGMA table_info(tasks)`.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that is absent, it runs an `ALTER TABLE tasks ADD COLUMN` with the default the rest of the code expects.
+
+So a file from an older version gets these values on its existing rows:
+
+- `status` = `'pending'`
+- `priority` = `5` (`DEFAULT_PRIORITY`)
+- `attempts` = `0`
+- `lease_expires` and `not_before` = `NULL`
+
+The test `test_migrates_old_schema` (`tests/test_repository.py:92-102`) covers this. It builds a bare `(id, payload)` table, inserts one row, and checks that `claim()` returns it and `list_tasks()` reports priority 5.
+
+Limitations I can see from the code:
+
+- **No version tracking.** Migration is detected by column presence. That works for adding columns, but it cannot express changed types, constraints, indexes, or data rewrites.
+- **Possible race on first open.** Each `_connect()` runs the `ALTER`s with no lock. If two processes open an old-schema file at the same moment, both may try to add the same column, and one may fail with "duplicate column name". I inferred this from the code and did not reproduce it. No test covers concurrent migration.
+- **Migration runs on every connection.** It is cheap once the columns exist, since it only runs `PRAGMA table_info`, but it means schema changes happen implicitly on any command, including read-only ones like `list`.
+
+I did not run the test suite.

@@ -1,0 +1,6 @@
+`stats` now prints `mean` after `sum`, and `go test ./...` passes. I didn't run `gofmt` (the combined command needed approval), so formatting is unchecked.
+
+- **Mean:** it's the sum divided by the number of non-empty numeric cells, and it prints `mean: n/a` when there are none. `count` still counts every data row, and the `count` and `sum` lines keep their format. The change is in `stats.go`.
+- **Short rows:** a row too short to have the column counts as an empty cell, so it's skipped in the mean.
+- **Comments and usage:** I replaced the "do not add mean" TODO with a comment describing the decided policy, and updated the usage text and flag help in `main.go` to mention mean.
+- **Tests:** the four `stats` tests that check exact output now expect the `mean` line. Their means are 4.166666666666667, 2, `n/a` and 3. I didn't add a test for the all-empty column (`mean: n/a` with rows present); the zero-rows test covers `n/a`.

@@ -1,0 +1,7 @@
+**Fix:** `Repository.claim` (`taskq/repository.py:120`) now runs `BEGIN IMMEDIATE` before its SELECT. The SELECT for the next claimable task and the UPDATE that marks it `running` happen in one transaction that takes SQLite's write lock up front. A second worker calling `claim` waits for the lock instead of reading the same row. The `_after_select_hook` test hook (used in `tests/test_repository.py:77`) lets a test widen that window to check the behaviour.
+
+**Why it happened:** Python's `sqlite3` module only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), not before a SELECT. The original `claim` did its SELECT outside any transaction. Two workers could both select the same pending row, and both would then mark it `running` and hand it out. The explicit `BEGIN IMMEDIATE` closes that gap.
+
+**Rejected alternative:** A lock file. The project notes say "No lock file, by the user's choice," so the fix stays inside SQLite. The notes don't record any other alternatives that were considered.
+
+I read the code to confirm this; I did not run `python3 -m unittest`.

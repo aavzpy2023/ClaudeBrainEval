@@ -1,0 +1,11 @@
+`createStore` now recovers from a corrupt `NOTES_FILE`. If the file can't be parsed, it is renamed to `<file>.corrupt` and the store starts empty. The full suite passes (29/29), including a new test for this case.
+
+Changes:
+- **`src/store.ts`**: `load` wraps only the `JSON.parse` in a try/catch. On failure it calls `renameSync(file, `${file}.corrupt`)` and returns `[]`. A missing file still returns `[]` as before.
+- **`test/persistence.test.ts`**: new test that writes `{not json`, expects an empty list, checks the original bytes are at `.corrupt`, and checks the original path is gone.
+
+Two things to be aware of:
+- A file that parses as valid JSON but isn't an array (e.g. `{}`) is not covered. It still loads and fails later. Say if you want that treated as corrupt too.
+- If a `.corrupt` file already exists, the rename overwrites it, so an earlier corrupt copy is lost. I left that as is.
+
+I haven't committed anything.

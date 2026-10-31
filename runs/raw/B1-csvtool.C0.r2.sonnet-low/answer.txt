@@ -1,0 +1,8 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes.
+
+- **Calculation:** the mean is the sum divided by the number of non-empty numeric cells, so empty cells are skipped. If the column has no numeric cell, it prints `mean: n/a`. `count` still counts every data row.
+- **Existing lines:** `count` and `sum` keep their format.
+- **Tests:** I updated the expected output in `stats_test.go` for the new line. The new expected values are `4.166666666666667`, `2`, `n/a` and `3` for the four existing tests that exercise `stats` output.
+- **Code and usage text:** I removed the old TODO about the undecided empty-cell policy from the `Stats` comment and documented the mean there instead. The usage string in `main.go` now reads "(count, sum and mean)".
+- **Not done:** I didn't add a test for a column that has only empty cells. The "no rows" test is the one that covers `mean: n/a`. I also didn't run `gofmt`.
+- **Left unchanged:** the `-c` flag help text in `main.go` still says "numeric column to count and sum".

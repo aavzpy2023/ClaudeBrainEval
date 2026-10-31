@@ -1,0 +1,9 @@
+`createStore` now recovers from a corrupt `NOTES_FILE`. If the file can't be parsed, it is renamed to `<file>.corrupt` and the store starts empty. `node --test` passes all 29 tests, including a new one for this case.
+
+The change is in `src/store.ts`. `load` catches the `SyntaxError` from `JSON.parse`, renames the file, and returns `[]`. Other errors are still rethrown. The new test in `test/persistence.test.ts` writes invalid JSON and checks that the original bytes land in `.corrupt`, the store is empty, and the next write creates a fresh `NOTES_FILE` that reloads correctly.
+
+Two things to be aware of:
+- A second corruption overwrites the earlier `.corrupt` file, because `renameSync` replaces an existing target on POSIX. If you want to keep every backup, I can add a timestamp to the name.
+- If the rename itself fails (for example, a permissions problem), that error still throws. The "must not throw" requirement covers unparseable content, not an unwritable directory.
+
+I haven't committed anything.

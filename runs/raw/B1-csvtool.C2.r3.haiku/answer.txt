@@ -1,0 +1,7 @@
+`stats` now prints a `mean:` line after `sum:`, computed over the non-empty cells. `go vet ./...` and `go test ./...` pass.
+
+- **Output:** `count` still counts every data row. `mean` is `sum / numeric cells`, and prints `n/a` when the column has no numeric cell.
+- **Code:** `stats.go` tracks the non-empty count and replaces the old TODO with a comment describing the skip policy. The usage string in `main.go` now says "count, sum and mean".
+- **Tests:** I updated the expectations in `stats_test.go` for the existing tests that print `sum`. I renamed `TestStatsEmptyCellAddsNothingToSum` to `TestStatsEmptyCellSkipped` and added `TestStatsMeanSkipsEmptyCells` and `TestStatsNoNumericCell`. `json_test.go` needed no change because `stats --format json` still exits 2.
+
+I did not run `gofmt`, because the shell denied it, so formatting of the changed files is unverified. I also did not commit.

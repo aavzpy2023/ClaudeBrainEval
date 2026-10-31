@@ -1,0 +1,3 @@
+Yes, it's been decided: **no auto-detection**. According to the project notes in CLAUDE.md, `--delim` defaults to comma (`\t` means tab), applies to both input and output, and "no auto-detection."
+
+The notes don't name an owner for this one. It reads as your own call, recorded as a settled decision, and not as an open question. The open items are different: the final JSON format and the empty-cell/`mean` policy are marked undecided, and the `mean` policy is explicitly noted as having no owner.

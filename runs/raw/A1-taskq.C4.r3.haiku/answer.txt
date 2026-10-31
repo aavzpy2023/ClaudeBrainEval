@@ -1,0 +1,9 @@
+**Short answer:** Two workers could both read the same pending row before either marked it as running. The fix wraps the select-and-update in a `BEGIN IMMEDIATE` transaction. The rejected alternative was a lock file.
+
+**Why it happened:** `claim()` ran its SELECT and its UPDATE as separate steps with no transaction around the SELECT. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT ran without holding any lock. Two workers could both select the same row, then both mark it running and return it. Commit `3b07992` ("Fix duplicate task hand-out when workers claim concurrently") describes this root cause.
+
+**How it was fixed:** `claim()` now runs `BEGIN IMMEDIATE` before the SELECT. That takes the write lock first, so a second worker waits until the first commits and then sees the task as running. The commit also added a regression test. Two threads claim concurrently, and a test hook sleeps between the SELECT and UPDATE to make the race deterministic. The test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** A lock file. The project notes say the user chose not to use one. I didn't find the reasoning in the commit itself, so I'm relying on those notes for this part.
+
+**Note:** `3b07992` touched `taskq/storage.py`, but the current code has moved this logic into `Repository.claim()` in `taskq/repository.py`. The same `BEGIN IMMEDIATE` fix is still there, around line 134.

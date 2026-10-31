@@ -1,0 +1,7 @@
+I added `csvtool columns <file>`. It prints the header's column names one per line, and it prints nothing for empty input. `go vet` and `go test` pass. I also ran it by hand on standard input: `--delim ';'` split the header correctly, and empty input printed nothing.
+
+- **Flags:** it accepts `-` for standard input, `--delim` and `--lazy-quotes`. Without `--lazy-quotes`, a stray quote in the header is reported as an error.
+- **`--format`:** it rejects `--format json` as a usage error, like `select` and `filter` do.
+- **Code:** the logic is in a new `columns.go`, the CLI wiring and usage text are in `main.go`, and the tests are in `columns_test.go`.
+
+I didn't commit anything.

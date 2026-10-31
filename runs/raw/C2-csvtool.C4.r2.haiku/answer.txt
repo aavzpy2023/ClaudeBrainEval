@@ -1,0 +1,14 @@
+I added the `columns` subcommand. `go vet` and `go test ./...` pass, but I could not run the binary end to end because the shell blocked my smoke-test commands.
+
+**Changes**
+- `csvtool.go`: new `Columns(r, w, delim, lazy)`. It reads the header and writes each name on its own line. Empty input writes nothing and returns no error, so it exits 0.
+- `main.go`: new `columns` case, with `--delim`, `--lazy-quotes` and `-` for stdin, matching the other subcommands. It also takes the same `formatFlag` check as the others, so `--format json` exits 2. `runColumns` is the wrapper, and the usage string lists the new subcommand.
+- `columns_test.go` (new): covers one name per line, header-only input, empty input, a custom delimiter, and `--lazy-quotes` (strict rejects a bare quote, lenient accepts it).
+
+**Choices I made**
+- Empty input exits 0 with no output. `select` and `filter` treat empty input as a missing-column error, but `columns` has no column to look for, so I didn't copy that.
+- I didn't commit anything.
+
+**Not verified**
+- Running the built binary against stdin and the `--format json` rejection. Those paths go through `main.go` and aren't covered by the unit tests. The shell blocked the pipes and `&&` chains I tried.
+- `gofmt -l .` ran with no output in the single-command check, so the files look clean, but I didn't check that output in a clean run.

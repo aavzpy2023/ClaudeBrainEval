@@ -1,0 +1,17 @@
+taskq upgrades old databases in place, every time it opens one. There is no version-numbered migration system.
+
+`Repository._connect()` in `taskq/repository.py:54-74` does three things on each connection:
+
+1. Runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. This creates the table if it's missing, and does nothing otherwise.
+2. Reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that isn't present, runs an `ALTER TABLE tasks ADD COLUMN`.
+
+Old rows get sensible values from the column defaults. `status` becomes `'pending'`, `priority` becomes `DEFAULT_PRIORITY`, and `attempts` becomes 0. `lease_expires` and `not_before` are NULL.
+
+The test `test_migrates_old_schema` in `tests/test_repository.py:92-102` covers this. It creates a bare `(id, payload)` table with one row, claims it, and checks that the row comes back with the default priority of 5. I haven't run the test suite.
+
+Things to be aware of:
+
+- **`SCHEMA_VERSION = 1` in `taskq/cli.py:11` isn't used for migrations.** It only appears in the JSON output. Nothing records or checks a schema version in the database, so a future change that can't be expressed as "add a missing column" would need a new mechanism.
+- **The ALTERs aren't wrapped in a transaction, and nothing guards them against concurrent openers.** Two processes opening an old database at the same moment could both see a column as missing, and one would fail with "duplicate column name". I haven't tested this. It's a plausible race given the code.
+- **Downgrades aren't handled.** A database that has been upgraded and then opened by an older taskq will still work, since the old code only reads the original columns. The new columns are simply ignored.

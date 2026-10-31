@@ -1,0 +1,7 @@
+No, it hasn't been decided, and nobody owns the decision yet.
+
+The code says so directly. In `main.go` at lines 17–20, above `delimFlag`, there's a comment marked "TODO(open question, NO OWNER)". It states that auto-detecting the delimiter "has NOT been decided and is deliberately not implemented," that `--delim` stays explicit with a comma default, and that detection shouldn't be added "until someone owns that decision."
+
+The git history agrees. The only commit touching delimiters is `1004441 Add --delim flag to all subcommands`, by aavzpy2023. Nothing in the log records a decision to detect or not detect delimiters.
+
+If you want to move this forward, someone needs to be named as the owner. Once that's settled, the TODO can be replaced with the decision.

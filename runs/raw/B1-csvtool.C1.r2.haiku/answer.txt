@@ -1,0 +1,7 @@
+`stats` now prints a `mean:` line after `sum:`, and `go test ./...` passes.
+
+- **`stats.go`**: `mean` is the sum divided by the count of non-empty cells, formatted like `sum`. With no non-empty cells it prints `mean: n/a`. `count` still counts every data row. I also replaced the TODO that said not to add `mean` until the empty-cell policy was decided.
+- **`stats_test.go`**: updated the expected output in the existing tests. Added two tests: one where the mean skips an empty cell, and one where every cell is empty so the mean is `n/a`.
+- **`main.go`**: the usage string said `(count and sum)`, so I changed it to `(count, sum and mean)`.
+
+I didn't run `gofmt`, because the sandbox asked for approval and I didn't request it. The edits follow the existing style, but it's worth running `gofmt -l .` before committing.

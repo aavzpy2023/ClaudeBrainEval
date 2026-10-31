@@ -1,0 +1,11 @@
+`createStore` now recovers from a corrupt `NOTES_FILE`. If the file can't be parsed, it is renamed to `<file>.corrupt` and the store starts empty, so startup no longer throws. `node --test` passes: 29 tests, up from 28, including a new one for this case.
+
+Changes:
+- **`src/store.ts`**: `load` wraps `JSON.parse` in a try/catch. On failure it renames the file to `<file>.corrupt` and returns `[]`.
+- **`test/persistence.test.ts`**: new test that writes truncated JSON, checks that `createStore` doesn't throw and lists nothing, that the original bytes are in `<file>.corrupt`, and that the original path is gone.
+
+Two things to know:
+- Only a parse failure triggers recovery. A file that parses but isn't an array (for example `{}`) still goes through the old path and will misbehave, since I didn't widen the scope.
+- If the rename itself fails (for example, a permissions problem), that error still throws. I left it uncaught so a broken setup stays visible rather than silently discarding notes.
+
+I haven't committed anything. The "corrupt NOTES_FILE" item in the open-issues list is now resolved.

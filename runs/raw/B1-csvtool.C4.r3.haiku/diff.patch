@@ -1,0 +1,124 @@
+diff --git a/main.go b/main.go
+index 3c02ac8..10b3d02 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count, sum and mean)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -114,7 +114,7 @@ func main() {
+ 		fail(runFilter(fs.Arg(0), cond, d, *lazy))
+ 	case "stats":
+ 		fs := flag.NewFlagSet("stats", flag.ExitOnError)
+-		c := fs.String("c", "", "numeric column to count and sum")
++		c := fs.String("c", "", "numeric column to count, sum and average")
+ 		delim := delimFlag(fs)
+ 		lazy := lazyFlag(fs)
+ 		format := formatFlag(fs, false)
+diff --git a/stats.go b/stats.go
+index 09f2cb7..aa9b1e5 100644
+--- a/stats.go
++++ b/stats.go
+@@ -7,16 +7,11 @@ import (
+ 	"strconv"
+ )
+ 
+-// Stats streams the CSV in r and writes the count and sum of column col to w
+-// as "count: N" and "sum: S" lines. count is the number of data rows. sum adds
+-// the numeric cells; an empty cell adds nothing, and any other non-numeric cell
+-// is an error naming its row.
+-//
+-// TODO(open question, NO OWNER): `mean` is deliberately NOT implemented. It
+-// depends on an undecided empty-cell policy: skip empty cells (divide by the
+-// non-empty count) or treat them as zero (divide by count)? Nobody owns this
+-// decision yet. Do not add mean, or change how count treats empty cells, until
+-// someone decides.
++// Stats streams the CSV in r and writes the count, sum and mean of column col
++// to w as "count: N", "sum: S" and "mean: M" lines. count is the number of data
++// rows. sum adds the numeric cells; an empty cell is skipped, and any other
++// non-numeric cell is an error naming its row. mean is sum divided by the number
++// of non-empty cells, or "n/a" if there are none.
+ func Stats(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
+ 	cr := csv.NewReader(r)
+ 	cr.Comma = delim
+@@ -40,7 +35,7 @@ func Stats(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
+ 	if idx < 0 {
+ 		return fmt.Errorf("%w: %q", ErrMissingColumn, col)
+ 	}
+-	var count int
++	var count, nonEmpty int
+ 	var sum float64
+ 	for row := 2; ; row++ {
+ 		rec, err := cr.Read()
+@@ -59,7 +54,12 @@ func Stats(r io.Reader, w io.Writer, col string, delim rune, lazy bool) error {
+ 			return fmt.Errorf("row %d: column %q: %q is not a number", row, col, rec[idx])
+ 		}
+ 		sum += v
++		nonEmpty++
+ 	}
+-	_, err = fmt.Fprintf(w, "count: %d\nsum: %s\n", count, strconv.FormatFloat(sum, 'f', -1, 64))
++	mean := "n/a"
++	if nonEmpty > 0 {
++		mean = strconv.FormatFloat(sum/float64(nonEmpty), 'f', -1, 64)
++	}
++	_, err = fmt.Fprintf(w, "count: %d\nsum: %s\nmean: %s\n", count, strconv.FormatFloat(sum, 'f', -1, 64), mean)
+ 	return err
+ }
+diff --git a/stats_test.go b/stats_test.go
+index 8fcce03..306e147 100644
+--- a/stats_test.go
++++ b/stats_test.go
+@@ -17,17 +17,17 @@ func TestStatsCountSum(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 3\nsum: 12.5\n"; got != want {
++	if want := "count: 3\nsum: 12.5\nmean: 4.166666666666667\n"; got != want {
+ 		t.Fatalf("got %q, want %q", got, want)
+ 	}
+ }
+ 
+-func TestStatsEmptyCellAddsNothingToSum(t *testing.T) {
++func TestStatsEmptyCellSkipped(t *testing.T) {
+ 	got, err := statsOf("a,b\n1,2\n3,\n5\n", "b")
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 3\nsum: 2\n"; got != want {
++	if want := "count: 3\nsum: 2\nmean: 2\n"; got != want {
+ 		t.Fatalf("got %q, want %q", got, want)
+ 	}
+ }
+@@ -37,7 +37,17 @@ func TestStatsNoRows(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 0\nsum: 0\n"; got != want {
++	if want := "count: 0\nsum: 0\nmean: n/a\n"; got != want {
++		t.Fatalf("got %q, want %q", got, want)
++	}
++}
++
++func TestStatsNoNumericCell(t *testing.T) {
++	got, err := statsOf("a,b\n1,\n2,\n", "b")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if want := "count: 2\nsum: 0\nmean: n/a\n"; got != want {
+ 		t.Fatalf("got %q, want %q", got, want)
+ 	}
+ }
+@@ -62,7 +72,7 @@ func TestStatsDelim(t *testing.T) {
+ 	if err := Stats(strings.NewReader("a;b\n1;2\n3;4\n"), &sb, "b", ';', false); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if want := "count: 2\nsum: 6\n"; sb.String() != want {
++	if want := "count: 2\nsum: 6\nmean: 3\n"; sb.String() != want {
+ 		t.Fatalf("got %q, want %q", sb.String(), want)
+ 	}
+ }

@@ -1,0 +1,12 @@
+I added the `columns` subcommand. `go vet` and `go test ./...` pass, and I checked stdin and empty input by hand. I did not verify `gofmt`: the sandbox blocked every `gofmt` call, so the new code is unchecked for formatting.
+
+**What changed**
+- `csvtool.go`: a new `Columns(r, w, delim, lazy)` function, next to `Select`. It reads the header and writes each name on its own line. Empty input returns nothing and no error.
+- `main.go`: a `columns` case that accepts `-` for stdin, `--delim`, and `--lazy-quotes`. It also takes `--format` and rejects `json` with a usage error, the same as `select`, `filter`, and `stats`. You didn't ask for that flag, so say if you'd rather drop it. The usage string now lists `csvtool columns <file>`.
+- `columns_test.go` (new): covers the header output, empty input, a custom delimiter, and lazy quotes (strict fails, lazy succeeds).
+
+**Checked by hand**
+- `printf 'name,age\nann,30\n' | go run . columns -` prints `name` and `age`, one per line.
+- `printf '' | go run . columns -` prints nothing.
+
+I did not commit.

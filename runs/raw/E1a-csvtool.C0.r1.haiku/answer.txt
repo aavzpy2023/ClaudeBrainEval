@@ -1,0 +1,10 @@
+No, it hasn't been decided, and nobody owns the decision yet.
+
+The code and history both say so:
+
+- **`main.go:17-20`** has a TODO marked "open question, NO OWNER." It says auto-detection "has NOT been decided and is deliberately not implemented." It also says `--delim` stays explicit with a comma default, and that detection shouldn't be added until someone owns the decision.
+- **Commit `1004441`** ("Add --delim flag to all subcommands") carries the same note in its message: detection is "still an open question with no owner."
+
+I found nothing later in the history that changes this. So the delimiter stays explicit: `--delim` defaults to `,`, and users pass `--delim '\t'` or another single character for other formats.
+
+To settle it, someone needs to make the call. That person would also decide whether detection should run only when `--delim` is absent, and how it should handle ambiguous files. I can't make that decision for the project, but I can implement whichever option you pick.

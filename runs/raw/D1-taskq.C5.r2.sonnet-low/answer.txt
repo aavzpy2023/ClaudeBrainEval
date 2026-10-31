@@ -1,0 +1,5 @@
+It gets priority **3**.
+
+`DEFAULT_PRIORITY = 3` in `taskq/repository.py:32`, and the CLI's `--priority` default uses it (`taskq/cli.py:28`). Commit `3a4a4e0` lowered it from 5 to 3.
+
+`CLAUDE.md` and the comment at `taskq/repository.py:26-27` still say the default is 5, so both are out of date.

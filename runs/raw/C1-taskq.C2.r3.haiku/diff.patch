@@ -1,0 +1,125 @@
+diff --git a/taskq/cli.py b/taskq/cli.py
+index 33e0457..0a64a53 100644
+--- a/taskq/cli.py
++++ b/taskq/cli.py
+@@ -15,6 +15,13 @@ def _print_json(doc):
+     print(json.dumps({"v": SCHEMA_VERSION, **doc}))
+ 
+ 
++def _positive_int(value):
++    number = int(value)
++    if number < 1:
++        raise argparse.ArgumentTypeError("must be at least 1")
++    return number
++
++
+ def main(argv=None):
+     parser = argparse.ArgumentParser(prog="taskq")
+     sub = parser.add_subparsers(dest="command", required=True)
+@@ -30,6 +37,9 @@ def main(argv=None):
+     )
+     ls = sub.add_parser("list", help="list tasks")
+     ls.add_argument("--json", action="store_true", help="print JSON")
++    ls.add_argument(
++        "--limit", type=_positive_int, metavar="N", help="show at most N tasks"
++    )
+     claim = sub.add_parser("claim", help="claim the next pending task")
+     claim.add_argument("--json", action="store_true", help="print JSON")
+     done = sub.add_parser("done", help="mark a task done")
+@@ -70,11 +80,11 @@ def main(argv=None):
+             {
+                 "tasks": [
+                     {"id": i, "priority": p, "text": t}
+-                    for i, p, t in repo.list_tasks()
++                    for i, p, t in repo.list_tasks(limit=args.limit)
+                 ]
+             }
+         )
+     else:
+-        for task_id, priority, payload in repo.list_tasks():
++        for task_id, priority, payload in repo.list_tasks(limit=args.limit):
+             print(f"{task_id}\t{priority}\t{payload}")
+     return 0
+diff --git a/taskq/repository.py b/taskq/repository.py
+index 8247752..5031581 100644
+--- a/taskq/repository.py
++++ b/taskq/repository.py
+@@ -93,11 +93,17 @@ class Repository:
+             conn.close()
+ 
+ 
+-    def list_tasks(self):
+-        """Return all tasks as (id, priority, payload) tuples in insertion order."""
++    def list_tasks(self, limit=None):
++        """Return up to `limit` tasks as (id, priority, payload) tuples in insertion order."""
+         conn = self._connect()
+         try:
+-            return conn.execute("SELECT id, priority, payload FROM tasks ORDER BY id"
++            if limit is None:
++                return conn.execute(
++                    "SELECT id, priority, payload FROM tasks ORDER BY id"
++                ).fetchall()
++            return conn.execute(
++                "SELECT id, priority, payload FROM tasks ORDER BY id LIMIT ?",
++                (limit,),
+             ).fetchall()
+         finally:
+             conn.close()
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index d92b8c4..84c26c3 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -85,6 +85,41 @@ class CliTest(unittest.TestCase):
+             {"v": 1, "tasks": [{"id": 1, "priority": 5, "text": "hello"}]},
+         )
+ 
++    def _add_three(self, d):
++        with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++            for text in ("a", "b", "c"):
++                with contextlib.redirect_stdout(io.StringIO()):
++                    cli.main(["add", text])
++
++    def test_list_limit(self):
++        with tempfile.TemporaryDirectory() as d:
++            self._add_three(d)
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--limit", "2"])
++        self.assertEqual(out.getvalue(), "1\t5\ta\n2\t5\tb\n")
++
++    def test_list_limit_json(self):
++        with tempfile.TemporaryDirectory() as d:
++            self._add_three(d)
++            with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
++                out = io.StringIO()
++                with contextlib.redirect_stdout(out):
++                    cli.main(["list", "--json", "--limit", "1"])
++        self.assertEqual(
++            json.loads(out.getvalue()),
++            {"v": 1, "tasks": [{"id": 1, "priority": 5, "text": "a"}]},
++        )
++
++    def test_list_limit_rejects_below_one(self):
++        for value in ("0", "-3"):
++            with self.subTest(value=value):
++                with contextlib.redirect_stderr(io.StringIO()):
++                    with self.assertRaises(SystemExit) as cm:
++                        cli.main(["list", "--limit", value])
++                self.assertEqual(cm.exception.code, 2)
++
+     def test_list_json_empty(self):
+         with tempfile.TemporaryDirectory() as d:
+             with mock.patch.dict(os.environ, {"TASKQ_DB": os.path.join(d, "t.db")}):
+diff --git a/tests/test_repository.py b/tests/test_repository.py
+index 41b33ea..406d0fe 100644
+--- a/tests/test_repository.py
++++ b/tests/test_repository.py
+@@ -19,6 +19,7 @@ class RepositoryTest(unittest.TestCase):
+         self.repo.enqueue("a", )
+         self.repo.enqueue("b", )
+         self.assertEqual(self.repo.list_tasks(), [(1, 5, "a"), (2, 5, "b")])
++        self.assertEqual(self.repo.list_tasks(limit=1), [(1, 5, "a")])
+ 
+     def test_empty(self):
+         self.assertEqual(self.repo.list_tasks(), [])

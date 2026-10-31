@@ -1,0 +1,11 @@
+I added the `columns` subcommand. `go vet` and `go test ./...` pass. I could not confirm `gofmt`, and I did not run the binary against piped stdin, because the shell blocked those commands for approval.
+
+- **`columns.go`** (new): `Columns` reads only the header and prints each name on its own line. Empty input prints nothing and exits 0. It uses the same CSV setup as the other readers, so `--delim` and `--lazy-quotes` apply.
+- **`main.go`**: a `columns` case that accepts `--delim`, `--lazy-quotes` and `-` for stdin. It takes no `-c`. Like `select`, `filter` and `stats`, it rejects `--format json` with exit 2. I also added a usage line.
+- **`columns_test.go`** (new): covers a basic header, a header-only file, empty input, a tab delimiter and a quoted name containing a comma.
+
+Not verified:
+- `gofmt -l` was blocked, so formatting is unconfirmed.
+- Stdin (`-`) and the `--format json` rejection were not run end to end. The stdin path goes through the same `open` helper that `head` uses.
+
+Nothing is committed. The changes are in `columns.go`, `columns_test.go` and `main.go`.

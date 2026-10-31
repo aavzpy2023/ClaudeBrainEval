@@ -1,0 +1,10 @@
+`createStore` now recovers from a corrupt `NOTES_FILE` instead of crashing at startup. All 29 tests pass, including a new one for this case.
+
+If the file can't be parsed as JSON, or parses to something other than an array, `load()` in `src/store.ts` renames it to `<file>.corrupt` and returns an empty list. Notes created afterwards are written to a fresh file, and the `.corrupt` copy is kept for inspection.
+
+The new test is in `test/persistence.test.ts`. It writes garbage to the file, then checks that:
+- the store is empty,
+- `.corrupt` holds the original content, and
+- a new note survives a reload.
+
+One thing I didn't cover: a second corruption overwrites any existing `<file>.corrupt` from an earlier one. Say if you'd rather keep each one under a unique name.

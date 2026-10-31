@@ -1,0 +1,17 @@
+taskq upgrades old database files on the fly. Every connection runs a migration step in `Repository._connect()` (`taskq/repository.py:54-74`):
+
+1. `CREATE TABLE IF NOT EXISTS tasks (id, payload)` creates the oldest shape if the file has no table.
+2. `PRAGMA table_info(tasks)` lists the existing columns.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...`.
+
+Existing rows get defaults from those `ALTER` statements: `status` is `'pending'`, `priority` is `DEFAULT_PRIORITY` (5), `attempts` is 0, and `lease_expires` and `not_before` are NULL. So an old task is claimable as a normal pending task.
+
+There is no schema version number. The migration checks for each column by name, so it is idempotent and runs every time. The `"v": 1` in the JSON output is a separate output-format version and is not related to the database.
+
+The test `test_migrates_old_schema` (`tests/test_repository.py:92-102`) covers this. It creates a bare `(id, payload)` table with one row, then checks that `claim` returns that row and `list_tasks` reports priority 5.
+
+Things I did not verify or that are weak:
+- I read the code and the test but did not run `python3 -m unittest`, so I have not confirmed the test passes.
+- The migration runs DDL outside an explicit transaction. Two processes opening an old database at the same moment could both try to add the same column, and one could fail with "duplicate column name". I did not test that race.
+- A file that is partially migrated, for example after a crash between two `ALTER`s, is fine because each column is checked separately.
+- The memory digest notes that `./taskq.db` files from the old cwd-relative default are not migrated and need `TASKQ_DB`. That is a path problem, not a column problem, so this migration does not handle it.

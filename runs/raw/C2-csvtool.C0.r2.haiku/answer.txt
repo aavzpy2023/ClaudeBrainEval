@@ -1,0 +1,7 @@
+I added `csvtool columns <file>`. It prints the header's column names one per line and accepts `-` for stdin, `--delim`, and `--lazy-quotes`. Empty input prints nothing and exits 0. The Go tests pass and `go vet` is clean.
+
+- **`columns.go`** (new): the `Columns` function, modelled on `Stats`. It reads only the header row.
+- **`columns_test.go`** (new): covers the header output, empty input, and the delimiter and lazy-quotes flags.
+- **`main.go`**: adds the `columns` case, a `runColumns` helper, and a usage line.
+
+I ran `columns` by hand on an empty file (no output) and on stdin with `--delim ';' --lazy-quotes`, which printed the expected names. I did not run `gofmt`, because the sandbox asked for approval on that command. I wrote the code in the existing style, but please run `gofmt -l .` before committing. I have not committed anything.

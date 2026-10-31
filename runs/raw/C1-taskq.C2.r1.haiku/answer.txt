@@ -1,0 +1,8 @@
+`taskq list` now takes `--limit N`, with or without `--json`. It returns at most N tasks in insertion order, and a value below 1 exits with status 2. The suite passes (28 tests, including 3 new ones), and `taskq list --limit 0` prints a usage error and exits 2.
+
+The changes are in three files:
+- **`taskq/repository.py`**: `list_tasks(limit=None)` passes the limit to SQL. `None` means no limit, which keeps existing callers unchanged.
+- **`taskq/cli.py`**: `--limit` uses a `_positive_int` type that rejects values below 1 through argparse, so the usage error and exit 2 come from argparse itself.
+- **`tests/test_cli.py`**: tests cover the plain output, the JSON output, and rejection of `0` and `-3`.
+
+I did not commit. Say if you want a commit with the Haiku co-author line.

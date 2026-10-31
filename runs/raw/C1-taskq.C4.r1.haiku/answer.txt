@@ -1,0 +1,10 @@
+`taskq list --limit N` is in place, with and without `--json`. The suite passes: 29 tests, up from 25.
+
+- **Behaviour:** `--limit N` returns at most N tasks in insertion order (ascending id). Both the plain and `--json` output paths use it.
+- **Usage error:** a value below 1 (or not an integer) is rejected by argparse with exit status 2.
+- **Where the logic lives:** `Repository.list_tasks(limit=None)` applies the cap with `LIMIT ?` in SQL, so the CLI doesn't touch SQL. `None` means no limit.
+- **Tests added:** a repository test for the limit, two CLI tests (plain and `--json`), and a test that `0` and `-3` both exit 2.
+
+I didn't run the flag by hand against a real database, because my shell call was blocked for approval. The unit tests cover the same paths.
+
+The changes are uncommitted, in `taskq/repository.py`, `taskq/cli.py`, `tests/test_repository.py` and `tests/test_cli.py`.

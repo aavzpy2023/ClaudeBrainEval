@@ -1,0 +1,8 @@
+I added `csvtool columns <file>`, which prints the header's column names one per line. The full test suite passes, including a new `TestColumns`. I also ran the command by hand on two inputs:
+
+- **`-` for standard input:** `printf 'a;b\n1;2\n' | csvtool columns --delim ';' -` printed `a` and `b`.
+- **Empty input:** `printf '' | csvtool columns -` printed nothing.
+
+It accepts `--delim` and `--lazy-quotes` like the other subcommands. Without `--lazy-quotes`, a stray quote in the header is an error, as in the other subcommands.
+
+The logic is in the new `columns.go`, with tests in `columns_test.go`. In `main.go` I added the `columns` case and a `runColumns` helper, and listed the command in the usage text. I didn't commit anything.

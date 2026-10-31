@@ -1,0 +1,9 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes. I didn't run `gofmt`.
+
+- **Mean:** it is the sum divided by the number of non-empty cells. If the column has no numeric cell, it prints `mean: n/a`.
+- **Count:** `count` still counts every data row, and the existing `count` and `sum` lines are unchanged.
+- **Short rows:** a row too short to have the column is skipped like an empty cell. That matches how `sum` already treated it. I didn't add a test for it beyond the existing short-row case.
+- **Tests:** I added the `mean` line to the expected output in `stats_test.go`. The values are `4.166666666666667`, `2`, `n/a` and `3`.
+- **Housekeeping:** I removed the old TODO in `stats.go` that said not to add `mean`. I also updated the usage text and the `-c` flag description in `main.go` to mention mean.
+
+I haven't committed anything.

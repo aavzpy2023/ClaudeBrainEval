@@ -1,0 +1,16 @@
+taskq migrates old databases automatically each time it opens a connection. `Repository._connect` in `taskq/repository.py:54-74` does this:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks`, which creates only `id` and `payload`. An old table is left alone.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each of `status`, `lease_expires`, `priority`, `attempts` and `not_before` that is missing, it runs `ALTER TABLE tasks ADD COLUMN`.
+   - `status` defaults to `'pending'`.
+   - `priority` defaults to 5.
+   - `attempts` defaults to 0.
+   - `lease_expires` and `not_before` default to NULL.
+
+Old rows therefore become normal pending tasks with default priority and no backoff. There's no `user_version` or migration table. The check is column-by-column and runs on every connect, so repeat runs do nothing.
+
+- **Old `./taskq.db` files:** the old cwd-relative path is not migrated. The default is now `~/.taskq/queue.db`, so you have to point `TASKQ_DB` at the old file.
+- **Old column names:** this only works if the old schema used the same `id` and `payload` columns. A file with a different base schema isn't handled.
+
+I read the code but didn't run a migration test against an old-format file.

@@ -1,0 +1,3 @@
+`DELETE /notes/:id` answers **404** with the body `{"error":"Note not found"}` when the note doesn't exist. When the note does exist, it answers 204 with no body (`src/server.ts:94-99`).
+
+The session digest said DELETE was idempotent and always returned 204. That's out of date. Commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist") changed it, and the code follows that commit.

@@ -1,0 +1,5 @@
+A task added without `--priority` gets priority **3**.
+
+The default is set by `DEFAULT_PRIORITY = 3` in `taskq/repository.py:32`, and the `add` command's `--priority` option uses that constant as its default (`taskq/cli.py:28`). This matches the most recent commit, "Lower the default priority from 5 to 3".
+
+The SessionStart digest I was given still says the default is 5. That is stale, so I went by the code instead.

@@ -1,0 +1,7 @@
+**Root cause:** The PATCH handler took the raw request body and `Object.assign`ed it onto the stored note. Since nothing filtered the fields, a client could send `id` or `createdAt` in the body and overwrite them.
+
+**Fix (commit `26cc749`, per CLAUDE.md):**
+- `store.patch` now copies only `title` and `body` onto the note, so `id` and `createdAt` can't be touched.
+- PATCH validation (`validateNotePatch`) is now strict. It returns 422 for any other field, an empty patch, or an invalid value. This replaces the earlier approach of silently dropping fields, because silent drops hide client bugs.
+
+One discrepancy: the commit log I was given shows the fix as `e9d532a` ("Fix PATCH overwriting id and createdAt; reject unknown fields with 422"). CLAUDE.md lists it as `26cc749`, and its persistence hash (`7affb30`) also differs from the log (`afc653b`). The notes' hashes look stale, probably from a history rewrite. I answered from CLAUDE.md and the commit messages and didn't read the code.

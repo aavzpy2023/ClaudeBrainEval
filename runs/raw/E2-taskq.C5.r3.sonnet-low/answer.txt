@@ -1,0 +1,17 @@
+taskq upgrades old databases automatically, in place, each time it opens one. `Repository._connect` (`taskq/repository.py:54-74`) does this:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks`, with only `id` and `payload`. That is the oldest schema, so a brand-new DB starts there too.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each missing column it runs `ALTER TABLE ... ADD COLUMN` with a default:
+   - `status` defaults to `'pending'`.
+   - `lease_expires` is nullable.
+   - `priority` defaults to 5.
+   - `attempts` defaults to 0.
+   - `not_before` is nullable.
+
+Old rows therefore get sensible values. They come out as pending, priority 5, zero attempts, with no lease and no backoff delay.
+
+- **No schema version:** there is no `user_version` or migration table. The check is "is this column present?", so it is idempotent and safe to repeat.
+- **Additive only:** it can add columns but not rename, drop or retype them. A future change like that would need a real migration step.
+- **Concurrent first opens:** I haven't checked this. The check-then-`ALTER` isn't wrapped in a transaction, so two processes opening an old DB at once could race, and one `ALTER` could fail with a "duplicate column" error.
+- **Old cwd-relative files:** the old `./taskq.db` path is not migrated. Per CLAUDE.md, you have to point `TASKQ_DB` at it. Once you do, the column upgrade above applies to it as well.

@@ -1,0 +1,16 @@
+{
+  "run_id": "D1-taskq.C5.r1.haiku",
+  "model_requested": "haiku",
+  "effort": "low",
+  "condition": "C5",
+  "model_resolved": "claude-haiku-5-5",
+  "claude_version": "2.1.310 (Claude Code)",
+  "brain_commit": "6fd55f2",
+  "snapshot_db_sha256": "e24817dc4dd1c8c662adb62b4721f951777144e9cf21b4a2f1aa14cac1bfcf9a",
+  "snapshot_bundle_sha256": "6ae9458c1ca9f9c63b9cb200ddf3938198344ccf801bf4fc8695569a79a135ca",
+  "prompt_sha256": "a170b113dc6e52e9f1e36c909651ef5fcd5924740ee220b8b88dce61a1b09778",
+  "tools": "Read,Glob,Grep,Bash(git *)",
+  "started": "2026-10-31T01:39:12+00:00",
+  "exit_code": 0,
+  "status": "ok"
+}

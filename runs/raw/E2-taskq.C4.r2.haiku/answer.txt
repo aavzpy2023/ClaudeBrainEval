@@ -1,0 +1,21 @@
+taskq upgrades an old database in place. Every time a `Repository` opens a connection, `_connect()` in `taskq/repository.py:54-74` does the following:
+
+1. Runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`, so a database with no `tasks` table gets the original two-column table.
+2. Reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that is missing (`status`, `lease_expires`, `priority`, `attempts`, `not_before`), runs an `ALTER TABLE ... ADD COLUMN`.
+
+Rows from an old database get these values:
+
+- `status` = `'pending'`
+- `priority` = 5 (`DEFAULT_PRIORITY`)
+- `attempts` = 0
+- `lease_expires` and `not_before` = NULL, so the task is claimable immediately
+
+`tests/test_repository.py:92` (`test_migrates_old_schema`) covers this. It builds a bare `(id, payload)` table with one row, claims it, and checks that it comes back as `(1, "old")` and lists with priority 5.
+
+Things to be aware of:
+
+- **No version number.** The migration is driven by checking which columns exist, not by a schema version, so it can't tell an old database from a newer one. It only adds missing columns and never drops or changes existing ones.
+- **Runs on every connection.** The `PRAGMA` check happens on each connect. It's cheap, but there's no one-time step.
+- **Concurrent first use is untested.** If two processes open an old database at the same moment, both can see the column as missing and both try the `ALTER`. The second would fail with "duplicate column name". I didn't find a test or a lock for this, so I haven't confirmed it happens.
+- **Unusual old tables aren't handled.** If an existing `tasks` table lacks `payload` or has a different primary key, the `CREATE` is skipped and the code doesn't check for that.

@@ -1,0 +1,16 @@
+{
+  "run_id": "E1a-csvtool.C0.r1.sonnet-low",
+  "model_requested": "sonnet",
+  "effort": "low",
+  "condition": "C0",
+  "model_resolved": "claude-haiku-5-5",
+  "claude_version": "2.1.310 (Claude Code)",
+  "brain_commit": "6fd55f2",
+  "snapshot_db_sha256": "23630d7988fba781e3c4b7e4983731e699c86c91741e5f4b0cca3174bacfa707",
+  "snapshot_bundle_sha256": "3125cbf58128f25c475c53fc80fbd13924f8a7743907ab842b89f7446c5f4206",
+  "prompt_sha256": "acaebe39edb71c3d112dfd2febe082ac82b1750a782d213cd1c4bf7c7958261d",
+  "tools": "Read,Glob,Grep,Bash(git *)",
+  "started": "2026-10-31T01:59:36+00:00",
+  "exit_code": 0,
+  "status": "ok"
+}

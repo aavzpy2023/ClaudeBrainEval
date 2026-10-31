@@ -1,0 +1,13 @@
+▶ oracle: corrupt NOTES_FILE
+  ✔ does not throw, moves the bad file to <file>.corrupt and starts empty (1.687554ms)
+  ✔ the store keeps working and persists after recovering (1.704796ms)
+  ✔ a valid file loads normally and leaves no .corrupt file (0.505668ms)
+✔ oracle: corrupt NOTES_FILE (5.174573ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 133.308732

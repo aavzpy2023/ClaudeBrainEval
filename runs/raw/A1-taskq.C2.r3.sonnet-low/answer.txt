@@ -1,0 +1,7 @@
+**Why it happened:** In Python's `sqlite3` module, a plain SELECT doesn't open a transaction. `claim` did a SELECT to find the next claimable task and then an UPDATE to mark it running. Two workers could both run the SELECT before either ran the UPDATE, so both saw the same task and both claimed it.
+
+**The fix (commit `3b07992`):** `claim` now runs `BEGIN IMMEDIATE` before the SELECT. That takes SQLite's write lock up front, so the select-then-update sequence is atomic. A second worker waits until the first has committed, then sees the task as already running. The repository has a test hook, `_after_select_hook`, that lets a test run a competing claim between the SELECT and the UPDATE.
+
+**Rejected alternative:** a lock file to serialize workers. The user chose not to use one. SQLite's own locking already covers this, so a lock file would add a second mechanism and more failure modes, such as a stale lock left behind by a crashed worker.
+
+I'm answering from the project notes I was given and haven't re-read the commit or the code. If you want, I can check the diff of `3b07992` to confirm the details.

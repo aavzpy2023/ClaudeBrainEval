@@ -1,0 +1,6 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes. I couldn't run `gofmt -l` because that command needs approval, so formatting is unchecked.
+
+- **Mean:** it's the sum divided by the number of non-empty numeric cells, and prints `mean: n/a` when the column has none. `count` still counts every data row. The existing `count` and `sum` lines are unchanged. The change is in `stats.go`.
+- **Comment:** I replaced the old TODO about the undecided empty-cell policy with a doc comment describing the skip behavior.
+- **Tests:** I added the `mean` line to the expected output in `stats_test.go` for the count/sum, no-rows (`mean: n/a`) and delimiter tests.
+- **Empty-cell test:** I renamed it to `TestStatsEmptyCellSkipped`. Its input now has an extra row, so one empty cell, one missing cell and two numbers give `count: 4`, `sum: 6`, `mean: 3`.

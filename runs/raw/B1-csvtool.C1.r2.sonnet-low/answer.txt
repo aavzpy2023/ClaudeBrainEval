@@ -1,0 +1,9 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` passes. I didn't run `gofmt -l .` because the combined command was blocked pending approval. I also didn't add a new test for the empty-cell path.
+
+- **Mean:** it is the sum divided by the number of non-empty cells, and it prints `mean: n/a` when the column has no numeric cell. A row that is too short to reach the column also counts as empty.
+- **Count:** it still counts every data row.
+- **Code:** I removed the old TODO about the undecided empty-cell policy from `stats.go` and updated the doc comment.
+- **Usage text:** it now reads "count, sum and mean".
+- **Tests:** I updated the four expected outputs in `stats_test.go`. The empty-cell test exercises the skip policy (`sum: 2`, `mean: 2`, with `count: 3`).
+
+I didn't touch the `-c` flag description in `main.go`, which still says "count and sum".

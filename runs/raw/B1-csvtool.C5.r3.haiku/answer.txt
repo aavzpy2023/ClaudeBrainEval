@@ -1,0 +1,7 @@
+`stats` now prints a `mean` line after `sum`, and `go test ./...` and `go vet ./...` both pass. I did not confirm `gofmt`: the shell asked for approval on that command and I didn't get it through. It's still open in the project notes.
+
+- **Behaviour:** `mean` is `sum` divided by the number of non-empty numeric cells. `count` still counts every data row. If the column has no numeric cell, the line is `mean: n/a`.
+- **Code:** `stats.go` tracks a `nonEmpty` count alongside `count`. The `Stats` doc comment now describes the skip-empty policy, and the old TODO about the undecided `mean` is gone. The usage string in `main.go` now says "count, sum and mean".
+- **Tests:** I updated the expected output in `TestStatsCountSum`, `TestStatsEmptyCellSkippedForMean` (renamed from `TestStatsEmptyCellAddsNothingToSum`), `TestStatsNoRows` and `TestStatsDelim`. I added `TestStatsNoNumericCell` for the `n/a` case. The mean for the `12.5` case is `4.166666666666667`, and the test passes with it.
+
+`CLAUDE.md` still says `mean` is deliberately not implemented and that the policy is undecided. I left it alone because it's your file. It should be updated so it doesn't contradict the code.

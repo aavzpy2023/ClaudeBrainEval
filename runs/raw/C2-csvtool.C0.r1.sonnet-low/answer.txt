@@ -1,0 +1,9 @@
+I added `csvtool columns <file>`, which prints the header's column names one per line. The full test suite passes, including a new `TestColumns`. I also ran it by hand on stdin (`printf 'a,b\n1,2\n' | go run . columns -`) and it printed `a` and `b`.
+
+- **Options:** it takes `-` for standard input, `--delim` and `--lazy-quotes`, like the other subcommands.
+- **Empty input:** the code returns nothing without error for empty input. The test covers it, but I didn't run it from the command line.
+- **Output:** names are printed as plain text, not CSV-quoted. A header like `b"x` prints as `b"x`.
+- **Code:** the new `Columns` function is in `csvtool.go`, and the wiring and usage line are in `main.go`.
+- **Not run:** I didn't run `gofmt` or `go vet`. Those commands were blocked in this environment and I never retried them separately.
+
+I haven't committed anything.

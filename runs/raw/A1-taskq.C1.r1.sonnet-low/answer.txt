@@ -1,0 +1,9 @@
+I can answer the first two parts from the repo. I can't answer the third.
+
+**Why it happened:** `claim()` ran a SELECT to find the next claimable task, then an UPDATE to mark it running. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT ran with no lock held. Two workers could both SELECT the same pending row before either UPDATE took the write lock. Both then marked it running and returned it.
+
+**The fix (commit `3b07992`):**
+- `claim()` in `taskq/storage.py` now runs `BEGIN IMMEDIATE` before the SELECT. That takes the write lock first, so a second worker waits until the first commits. It then sees the task as running and picks a different one.
+- A regression test (`test_concurrent_claims_never_return_the_same_task`) runs two threads. A test-only hook, `_after_select_hook`, sleeps between the SELECT and the UPDATE so the race happens every time. The commit message says the test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**The rejected alternative:** I couldn't find one. The commit message and code comments don't mention any option that was considered and dropped for this bug. The only "rejected" note in the repo is about priority ordering, which is unrelated. If the alternative was discussed, it would be in the earlier session transcripts, so the session history would need checking. The `claude-brain` CLI needed approval to run, so I didn't read it. I won't guess at what the alternative was.

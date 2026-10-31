@@ -1,0 +1,7 @@
+`taskq list` now takes `--limit N`, and it works with and without `--json`. All 27 tests pass, including the two new ones. I haven't committed anything.
+
+- **Behaviour:** it shows at most N tasks in insertion order (by id). A value below 1 prints an argparse usage error and exits with status 2.
+- **Code:** `Repository.list_tasks` takes an optional `limit` and applies it as a SQL `LIMIT`, so the SQL stays in `Repository`. The CLI check is in `taskq/cli.py`.
+- **Tests:** in `tests/test_cli.py`, one covers the limit in plain and JSON output, and one checks that 0 and -1 exit with status 2.
+
+The JSON output is unchanged: `{"v":1,"tasks":[...]}`, now trimmed to N tasks.

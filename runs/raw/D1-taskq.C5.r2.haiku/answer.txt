@@ -1,0 +1,3 @@
+A task added without `--priority` gets priority **3**.
+
+`DEFAULT_PRIORITY = 3` in `taskq/repository.py:32`, and `enqueue` uses it when no priority is passed. The `CLAUDE.md` notes still say the default is 5, which is out of date. Commit `3a4a4e0` ("Lower the default priority from 5 to 3") changed it, and the notes weren't updated. Existing rows keep whatever priority they were stored with.

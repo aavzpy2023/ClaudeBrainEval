@@ -1,0 +1,5 @@
+No, it hasn't been decided, and nobody owns the decision.
+
+The `TODO(open question, NO OWNER)` comment above `delimFlag` in `main.go:17` says auto-detecting the delimiter "has NOT been decided and is deliberately not implemented". The commit message for `1004441` ("Add --delim flag to all subcommands") says the same.
+
+For now, `--delim` is always explicit and defaults to a comma. The comment tells contributors not to add detection until someone owns the decision, so someone needs to be assigned to it first.

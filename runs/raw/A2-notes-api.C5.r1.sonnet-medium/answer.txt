@@ -1,0 +1,7 @@
+**Root cause:** The PATCH handler took the raw request body and `Object.assign`ed it onto the stored note. Because nothing filtered the fields, a client could include `id` or `createdAt` in the body and overwrite them.
+
+**Fix (commit `26cc749`, "Fix PATCH overwriting id and createdAt; reject unknown fields with 422"):**
+- `store.patch` now copies only `title` and `body` onto the note.
+- A new `validateNotePatch` in `src/validation.ts` makes PATCH strict. It accepts only `title` and `body`. Any other field, an empty patch, or an invalid value returns 422. Unknown fields are rejected instead of silently dropped, because silent drops hide client bugs.
+
+This comes from the project notes in CLAUDE.md. I didn't re-read the code or commits to confirm it.

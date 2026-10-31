@@ -1,0 +1,9 @@
+No, it hasn't been decided, and no one owns the decision.
+
+The only record is an open-question comment in `main.go`, above `delimFlag` (around line 17). It was added in commit `1004441` ("Add --delim flag to all subcommands") and reads:
+
+> TODO(open question, NO OWNER): should csvtool also auto-detect the delimiter? This has NOT been decided and is deliberately not implemented; --delim is always explicit and defaults to a comma. Do not add detection here until someone owns that decision.
+
+So the current behavior is that `--delim` is always explicit and defaults to `,`. Nothing in the code, tests, usage text, or commit messages records a decision to add or reject detection, and no owner is named. The question stays open until someone takes it on, and the comment says not to add detection before then.
+
+If you want to move it forward, the person who owns the project would need to decide whether to add detection. Once that's settled, the TODO should be replaced with the decision and an owner. I haven't changed anything in the repo.

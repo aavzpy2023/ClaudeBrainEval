@@ -1,0 +1,7 @@
+No, it hasn't been decided, and nobody owns the decision. csvtool does not auto-detect the delimiter. `--delim` is always explicit and defaults to a comma.
+
+The code confirms this. The TODO above `delimFlag` in `main.go` (lines 17–20) reads: "should csvtool also auto-detect the delimiter? This has NOT been decided and is deliberately not implemented… Do not add detection here until someone owns that decision." I found no detection logic anywhere in the repo.
+
+The project notes agree: the only delimiter decision on record is that `--delim` (default comma, `\t` for tab) applies to input and output, with no auto-detection. They don't name an owner, and I don't see one in the code or recent commits either.
+
+If you want detection, someone needs to take ownership of the question first. Once that's settled, the change would go in `delimFlag`.

@@ -1,0 +1,5 @@
+No, it hasn't been decided, and nobody is named as the owner.
+
+The current state is that `--delim` is always explicit and defaults to a comma. Auto-detection is deliberately not implemented. The code has a TODO in `main.go` (around lines 17–19) that marks it as an open question with no owner, and it says not to add detection until the question is settled. The project notes say the same thing: "--delim ... applies to input and output; no auto-detection."
+
+I didn't find any record of who should make the call, so the decision is open. Someone who maintains the project would need to pick it up. If you want, I can draft the trade-offs (for example, sniffing the first line versus requiring an explicit flag, and the failure modes of each) so the decision can be made.

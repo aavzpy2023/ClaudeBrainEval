@@ -1,0 +1,8 @@
+`createStore` no longer crashes on a corrupt `NOTES_FILE`. It now moves the unreadable file to `<file>.corrupt` and starts with an empty store. All 29 tests pass, including the new one. I didn't run a type-check.
+
+- **Fix:** the change is in `load()` in `src/store.ts`. Any failure to parse the file triggers it, and so does valid JSON that isn't an array. The next write recreates the original file normally.
+- **Test:** I added a case to `test/persistence.test.ts`. It writes bad JSON, then checks that the store is empty, the original file is gone, `.corrupt` holds the original bytes, and a new note persists.
+- **Repeated corruption:** a second corruption overwrites any existing `.corrupt` file, so only the most recent bad file is kept.
+- **Not covered:** this doesn't address multi-process safety, which is a separate open question in the TODO.
+
+I haven't committed anything.

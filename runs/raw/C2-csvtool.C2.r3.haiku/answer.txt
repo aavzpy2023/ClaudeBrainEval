@@ -1,0 +1,11 @@
+I added `csvtool columns <file>`. It prints the header names one per line, and `go vet` and `go test ./...` both pass. I did not commit.
+
+What changed, in the repo at `/tmp/claude-brain-eval/runs/C2-csvtool.C2.r3.haiku/csvtool`:
+
+- **`columns.go`** (new): `Columns` reads only the header row and writes each name on its own line. Empty input writes nothing and exits 0. It takes the same `--delim` and `--lazy-quotes` handling as the other subcommands.
+- **`columns_test.go`** (new): covers a plain header, empty input, a tab delimiter, a quoted name containing a comma, and lazy quotes.
+- **`main.go`**: adds the `columns` case, a `runColumns` helper, and a usage line.
+
+Two checks did not run. The sandbox asked for approval on `gofmt -l .` and on piping stdin into the built binary, so I have not confirmed formatting or exercised `columns -` from the command line. The unit tests cover the same paths, including empty input and `--delim`, but the stdin route through `open("-")` is only reached by the test-less code path.
+
+I also left `--format` off `columns`, since it only prints names. Say if you want it accepted for consistency.

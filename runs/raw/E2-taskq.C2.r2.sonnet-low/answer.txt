@@ -1,0 +1,16 @@
+taskq upgrades old database files in place. It does this on every connection, in `Repository._connect` (`taskq/repository.py:54-74`). It has no schema-version number or separate migration step.
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`. That creates the minimal original schema for a new file and does nothing to an existing one.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...` with a default. The defaults let existing rows get sensible values:
+   - `status` is `'pending'`.
+   - `lease_expires` is NULL.
+   - `priority` is `DEFAULT_PRIORITY`, which is 5.
+   - `attempts` is 0.
+   - `not_before` is NULL.
+
+Old rows keep working after the upgrade. They are pending, mid-priority, have no retries, and can be claimed immediately.
+
+- **Additive only:** this handles added columns, not renamed, removed or retyped ones.
+- **Not atomic:** the check-then-alter sequence isn't wrapped in a transaction. Two processes opening an old file at the same moment could both try the `ALTER`, and one would fail with "duplicate column name". I didn't test this.
+- **Old `./taskq.db` files:** these are a separate case. The default path moved to `~/.taskq/queue.db`, and old files in the working directory aren't picked up. Set `TASKQ_DB` to point at one.

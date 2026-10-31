@@ -1,0 +1,7 @@
+**Why it happened.** `claim()` ran a SELECT and then an UPDATE, and the SELECT wasn't inside a transaction. Python's `sqlite3` only opens an implicit transaction before DML (INSERT, UPDATE, DELETE). The SELECT therefore ran with no lock held. Two workers could both SELECT the same pending row before either UPDATE took the write lock. Both then marked it running and returned it.
+
+**The fix** is commit `3b07992`. `claim()` in `taskq/storage.py` now runs `BEGIN IMMEDIATE` before the SELECT, so the write lock is taken first. A second worker waits until the first commits, then sees the task as running.
+
+The commit also adds a regression test. Two threads call `claim()` on a two-task queue. A test-only hook, `_after_select_hook`, sleeps between the SELECT and the UPDATE to make the race deterministic. The test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative.** I couldn't find one. The commit message doesn't mention any, and a search of the git log and the repo for "rejected", "alternative", "instead" and similar turned up nothing about this bug. The hits were about other decisions: priority ordering, and SQLite versus Redis or a JSON file. If an alternative was discussed, such as an atomic `UPDATE ... WHERE` claim, optimistic retry or a file lock, it wasn't written down in the repo. I'd rather not guess at one.

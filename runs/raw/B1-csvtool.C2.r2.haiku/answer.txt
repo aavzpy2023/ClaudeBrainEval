@@ -1,0 +1,17 @@
+`stats` now prints a `mean:` line after `sum:`. Tests and `go vet` pass. I did not get a gofmt check: the shell refused `gofmt -l`, so the formatting of the edited files is unverified.
+
+**Behavior** (`stats.go`):
+- Empty cells are skipped for the mean: mean = sum ÷ number of non-empty numeric cells.
+- `count` still counts every data row, including empty ones.
+- If the column has no numeric cell, the line is `mean: n/a`.
+- The mean uses the same float formatting as `sum`, so `12.5 / 3` prints `4.166666666666667`.
+- A non-numeric cell is still an error naming its row.
+
+**Other changes:**
+- Removed the TODO that blocked `mean` and updated the function's doc comment to match.
+- Updated the usage text in `main.go` to say "(count, sum and mean)".
+- Updated `stats_test.go`: the expected output in the existing tests now includes the mean line. Added `TestStatsNoNumericCell`, which covers the `n/a` case.
+
+The `head --format json` path in `json_test.go` exits before stats output, so it is unaffected.
+
+The working-tree changes are uncommitted. I did not commit, since you didn't ask for one.

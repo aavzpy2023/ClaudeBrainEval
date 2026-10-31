@@ -1,0 +1,18 @@
+taskq upgrades old database files in place, the first time it opens them. There's no schema version number. Each connection checks which columns exist and adds any that are missing.
+
+The logic is in `Repository._connect` (`taskq/repository.py:54-74`):
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`, so a file with no `tasks` table at all gets the original two-column table.
+2. It reads `PRAGMA table_info(tasks)` to get the existing column names.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that's missing, it runs `ALTER TABLE tasks ADD COLUMN ...`. Columns that already exist are skipped.
+
+Because this runs on every connection, a file from any earlier version is brought up to the current shape the next time any command touches it. Existing rows get the defaults: `status` is `'pending'`, `priority` is `DEFAULT_PRIORITY`, and `attempts` is `0`. `lease_expires` and `not_before` are NULL.
+
+There's a test for this path, `test_migrates_old_schema` (`tests/test_repository.py:92-102`). It creates a bare `tasks(id, payload)` table, inserts a row, and checks that `claim` and `list_tasks` work on it with the default priority.
+
+Two things to be aware of:
+
+- **No version check.** Migration is driven only by column presence. A future change that isn't an added column, such as a rename, a type change or a new index, would need its own handling. Nothing in the code records which schema version a file is at.
+- **Possible race on first open.** Two processes that open an old file at the same moment can both see a column as missing. The second `ALTER` then fails with "duplicate column name". I haven't checked whether that's handled. It's a narrow window, but it's there.
+
+I read the code and the test but didn't run the test suite, so the description of the test's behavior is from reading it.

@@ -1,0 +1,5 @@
+Yes, it's been decided: no auto-detection. The project notes say `--delim` defaults to comma (`\t` means tab) and applies to both input and output. You pick the delimiter explicitly.
+
+The notes don't say who made that call or why. They list it as a decision, not as a person's assignment, so I can't name an owner. The notes also only say what was chosen, not whether anyone might revisit it. I'm going from those notes and haven't re-checked the code or the commit message for `1004441` ("Add --delim flag to all subcommands").
+
+The open questions in the notes are different. The empty-cell and `mean` policy has no owner. The final JSON format (JSON Lines vs. a single array) is also undecided.

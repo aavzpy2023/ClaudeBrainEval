@@ -1,0 +1,10 @@
+`stats` now prints a `mean:` line after `sum:`. Empty cells are skipped for the mean, and `count` still counts every data row. `go vet ./...` and `go test ./...` pass.
+
+Changes:
+- **`stats.go`**: mean is `sum / non-empty numeric cells`, printed with the same float formatting as `sum`. If no cell is numeric, it prints `mean: n/a`. I removed the TODO that said `mean` was deliberately unimplemented, and updated the doc comment.
+- **`main.go`**: the usage line now says `(count, sum and mean)`.
+- **`stats_test.go`**: the expected output now includes a `mean:` line in the existing tests. I added `TestStatsMeanSkipsEmptyCells` (mean divides by non-empty cells, not by `count`) and `TestStatsMeanNoNumericCell` (prints `mean: n/a`).
+
+I did not run `gofmt -l`, because the sandbox asked for approval to run it. It is still unconfirmed on the recent changes, as the project notes say.
+
+`CLAUDE.md` still says `mean` is not implemented and that the empty-cell policy is undecided. I left it alone because it is checked in. It should be updated to record the skip-empty decision, or future sessions will get the wrong picture.

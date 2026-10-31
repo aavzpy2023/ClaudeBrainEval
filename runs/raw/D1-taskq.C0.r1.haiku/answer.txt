@@ -1,0 +1,5 @@
+Without `--priority`, the task gets priority **3**.
+
+The CLI's `--priority` option defaults to `repository.DEFAULT_PRIORITY` (`taskq/cli.py:28`), and that constant is `DEFAULT_PRIORITY = 3` (`taskq/repository.py:32`). The schema default in the migration (`repository.py:68`) and the `enqueue` default (`repository.py:77`) also use that constant.
+
+The design comment above it (`repository.py:27`) still says "default 5", which is stale. The recent commit "Lower the default priority from 5 to 3" changed the constant but not the comment. I haven't edited it.

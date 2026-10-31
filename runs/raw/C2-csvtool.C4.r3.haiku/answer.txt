@@ -1,0 +1,13 @@
+I added the `columns` subcommand. `go vet` and `go test ./...` pass, including four new tests for the header output, empty input, `--delim`, and `--lazy-quotes`.
+
+- **`columns.go`** (new): `Columns` reads the header and writes each name on its own line. Empty input prints nothing and exits 0.
+- **`main.go`**: adds the `columns` case and a `runColumns` helper that opens the file, or stdin for `-`. The usage text lists the new command.
+- **`columns_test.go`** (new): the tests.
+
+I did not add `--format`, since `columns` has no JSON output. Passing `--format` to it therefore gives "unknown flag", not the `ErrUsage` message other subcommands give.
+
+I could not run the built binary end to end: the sandbox blocked executing it and piping into it. The behavior is covered by the unit tests instead.
+
+`gofmt -l .` was also blocked, so formatting is unchecked for the new code. Run `gofmt -l .` before committing.
+
+A stray build output, `/tmp/claude-brain-eval/runs/C2-csvtool.C4.r3.haiku/csvtool-bin`, sits outside the repo. Its removal was blocked, so delete it by hand. Nothing is committed.

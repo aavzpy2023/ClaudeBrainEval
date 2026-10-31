@@ -1,0 +1,3 @@
+Yes, it's decided: **no auto-detection**. CLAUDE.md records this under the `--delim` decision. The flag defaults to comma, `\t` means tab, and it applies to both input and output.
+
+On who is responsible: the notes don't name an owner for this decision, and it doesn't need one because it's settled. The notes do list open items that have no owner, such as the final JSON format and the empty-cell/`mean` policy. Those are separate from delimiter handling.

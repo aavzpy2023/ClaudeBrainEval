@@ -1,0 +1,7 @@
+I added `csvtool columns <file>`. It prints the header names one per line, and `go vet` and `go test ./...` pass.
+
+- **Behaviour:** It accepts `-` for stdin, `--delim` and `--lazy-quotes`, like the other subcommands. Empty input prints nothing and exits 0.
+- **Files:** The logic is in `columns.go` (`Columns`), with the CLI wiring and usage line in `main.go`. Tests are in `columns_test.go`, covering the header, empty input and `--delim`.
+- **Checked:** `columns /dev/null` printed nothing.
+- **Not checked:** `gofmt -l .` needs approval in this shell, so I haven't confirmed formatting. I also didn't exercise the `-` stdin path by hand, though it uses the same `open` helper as the other subcommands.
+- **Not committed:** Nothing is committed. Say if you want a commit.

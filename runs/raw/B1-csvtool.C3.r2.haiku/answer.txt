@@ -1,0 +1,8 @@
+`stats` now prints a `mean:` line after `sum:`. `go vet` and `go test ./...` pass. I did not commit.
+
+- **Behaviour:** `mean` is the sum divided by the number of non-empty numeric cells. Empty cells are skipped. `count` still counts every data row. If the column has no non-empty cells, the line is `mean: n/a`.
+- **Code:** `stats.go` tracks a `filled` counter next to `count`. I also removed the old "mean is deliberately not implemented" TODO, since the policy is now decided.
+- **Usage text:** the `stats` line in the usage string now says "(count, sum and mean)", and the `-c` flag help says "numeric column to count, sum and average". Both are wording changes you didn't ask for; say if you'd rather keep the old text.
+- **Tests:** I updated the expected output in the existing `stats` tests, which now include a `mean:` line. I also added `TestStatsMeanSkipsEmptyCells`, which checks that an empty cell is left out of the mean.
+
+I did not run `gofmt -l .`, because the shell asked for approval and I didn't retry it. The `gofmt` status of these files is still unconfirmed.

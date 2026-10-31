@@ -1,0 +1,14 @@
+I added `csvtool columns <file>`, and `go vet` and `go test ./...` both pass. I did not get a clean `gofmt -l` check or a manual run of the built binary, because the shell rejected those commands for approval.
+
+**What changed**
+- `csvtool.go`: new `Columns(r, w, delim, lazy)`. It reads only the header and writes each name on its own line. Empty input returns nil with no output.
+- `main.go`: a `columns` case that takes `-` (stdin), `--delim` and `--lazy-quotes`, and exits 2 on a wrong argument count. Added `runColumns` and a usage line.
+- `columns_test.go` (new): tests for one-per-line output, empty input, a custom delimiter, and lazy quotes (strict rejects a stray quote, lazy accepts it).
+
+**Choices I made**
+- Names are printed raw, not CSV-quoted. A name containing a delimiter or newline will therefore print in a way that is hard to split again. Say if you want quoting instead.
+- `columns` does not accept `--format`, since you didn't ask for it.
+
+**Not verified**
+- `gofmt -l .` was never run on the new code, so formatting is unconfirmed.
+- I did not run the built binary against stdin or an empty file. The empty-input behaviour is covered by the unit test only.

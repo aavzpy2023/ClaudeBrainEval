@@ -1,0 +1,17 @@
+I added `csvtool columns <file>`, but I didn't run the CLI end to end. Piped shell commands needed approval, so the `-` stdin path and the empty-input case through the binary are unverified. Unit tests cover both at the function level.
+
+**What changed**
+- `columns.go` (new): `Columns(r, w, delim, lazy)` reads the header and writes each name on its own line. Empty input writes nothing and returns no error.
+- `columns_test.go` (new): tests for header output, empty input, `--delim` with a tab, and `--lazy-quotes` (strict mode errors on a bare quote, lazy mode accepts it).
+- `main.go`: a `columns` case that accepts `--delim`, `--lazy-quotes` and `-` for stdin, like the other subcommands. It rejects `--format json` with exit 2, as `select`, `filter` and `stats` do. I also added a line to the usage text.
+
+**Verification**
+- `go vet ./...` passes.
+- `go test ./...` passes.
+- `gofmt -l` and the stdin smoke test were blocked by the shell approval policy, so I did not run them.
+
+I ran `go fmt`, which reformatted `csvtool_test.go`, a file this change doesn't touch. I reverted that with `git checkout`, so the diff is only `main.go` plus the two new files. Nothing is committed.
+
+**Choices I made**
+- A header-only file prints its names and nothing else, which is what you'd expect.
+- `columns` does not accept `--format json`. That follows the "only `head` supports JSON" decision in the project notes.

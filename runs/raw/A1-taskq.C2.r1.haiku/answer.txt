@@ -1,0 +1,7 @@
+**Why it happened:** `claim()` ran its SELECT and UPDATE as separate steps, and the SELECT ran outside any transaction. Python's `sqlite3` only opens an implicit transaction before DML (INSERT/UPDATE/DELETE), so the SELECT held no lock. Two workers could both read the same pending row before either UPDATE took the write lock. Both then marked it `running` and returned it. (Commit `3b07992`, "Fix duplicate task hand-out when workers claim concurrently".)
+
+**How it was fixed:** `claim()` now runs `BEGIN IMMEDIATE` before the SELECT. That takes the write lock first, so a second worker waits until the first commits, then sees the task as `running` and skips it. The SELECT and UPDATE sit in the same transaction. The current code is in `taskq/repository.py:120-152`; the commit touched `taskq/storage.py` because the SQL was later moved into `Repository` (commit `3f22710`).
+
+A regression test uses two threads and a `_after_select_hook` that sleeps between the SELECT and UPDATE, so the race happens every run. Per the commit message, it fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** an external lock file. The project notes say the user chose not to use one, but that choice is not recorded in the commit message or the code, so I'm taking it from the project notes rather than from the repo. The reason isn't recorded either. The `BEGIN IMMEDIATE` approach keeps locking inside SQLite, so no separate lock file has to be managed.

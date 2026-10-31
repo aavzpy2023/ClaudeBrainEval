@@ -1,0 +1,8 @@
+I added `csvtool columns <file>`. `go test ./...` passes, including the new tests. I couldn't check `gofmt -l` or `go vet`: the shell asked for approval on `gofmt -l .` and I didn't get it, and my chained `gofmt`/`go vet` command was also blocked. So `gofmt` is still unconfirmed on this change. That was already an open issue in CLAUDE.md.
+
+- **Behavior:** it prints the header's column names, one per line, and prints nothing for empty input.
+- **Flags:** it takes `--delim` and `--lazy-quotes`, and `-` reads standard input, same as the other subcommands. It also accepts `--format csv` and rejects `--format json` with exit 2, like `select`, `filter` and `stats`.
+- **Code:** the logic is `Columns` in `csvtool.go`, wired into `main.go` through a new `runColumns`. I also added `columns` to the usage text.
+- **Tests:** `columns_test.go` covers a basic header, empty input, a header-only file, tab delimiter, quoted names, lazy quotes, and a bare quote failing in strict mode.
+
+I haven't committed anything. If you approve `gofmt -l .` I'll run it.

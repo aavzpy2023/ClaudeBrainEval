@@ -1,0 +1,7 @@
+DELETE `/notes/:id` returns **404** with `{ "error": "Note not found" }` when the note does not exist.
+
+The handler is in `src/server.ts:94-96`. It calls `store.delete(id)`, and if that returns `false` it sends the 404. Nothing is written to the file in that case, because `store.delete` (`src/store.ts:80-84`) persists only when a note was actually removed.
+
+The 404 is intentional. Commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist") changed it, so clients notice stale ids. The test at `test/notes.test.ts:181-188` covers this: the first delete returns 204, and a second delete of the same id, or of an id that never existed, returns 404.
+
+The session digest I was given still says DELETE is idempotent and returns 204. That is out of date. The code and the commit history show the strict behaviour.

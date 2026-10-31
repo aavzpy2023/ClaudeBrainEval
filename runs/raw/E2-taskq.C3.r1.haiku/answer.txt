@@ -1,0 +1,14 @@
+taskq handles this with an in-place migration that runs every time a connection is opened. It's in `Repository._connect()` in `taskq/repository.py:54-74`.
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id ..., payload ...)`, so a missing table is created.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column that's missing (`status`, `lease_expires`, `priority`, `attempts`, `not_before`), it runs `ALTER TABLE tasks ADD COLUMN ...` with a default.
+
+Rows from the old database get these defaults: `status='pending'`, `priority=5` (`DEFAULT_PRIORITY`), `attempts=0`, and `lease_expires`/`not_before` as NULL. So an old task that was never claimed is immediately claimable at default priority. `test_migrates_old_schema` in `tests/test_repository.py:92` covers this: it builds a bare `(id, payload)` table, claims the old row, and checks that `list_tasks` returns it with priority 5.
+
+Caveats:
+
+- **No version marker.** There's no `user_version` or schema-version table. The code infers the schema from the columns present, so adding a future column means adding another `if ... not in columns` branch.
+- **Possible race on first open.** Two processes that open an old database at the same moment could both see a column as missing. The second `ALTER` would then fail with "duplicate column name". I didn't test this, and the test suite doesn't cover it.
+- **Only the `tasks` table is handled.** The migration assumes that table already has `id` and `payload`. Any other shape won't be fixed.
+- **The old default file is not read.** The default location moved from `./tasks.db` in the working directory to `~/.taskq/queue.db`. The migration only upgrades whatever file the repository is pointed at, so an old `./tasks.db` must be moved or pointed to with `TASKQ_DB`. The project notes already flag this.

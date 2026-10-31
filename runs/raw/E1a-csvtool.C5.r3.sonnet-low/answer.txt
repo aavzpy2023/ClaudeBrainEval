@@ -1,0 +1,3 @@
+Yes, it's decided: **no auto-detection**. According to the project notes in CLAUDE.md, `--delim` defaults to comma (`\t` means tab) and applies to both input and output. The notes state outright that there is no auto-detection.
+
+The notes don't name an individual owner for this decision. They record it as a project decision made alongside the others, such as keeping `--lazy-quotes` strict by default, and don't say who made it. Two other items in the notes are marked as having no owner or being undecided: the empty-cell/`mean` policy and the final JSON format. The delimiter question isn't one of those.

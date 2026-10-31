@@ -1,0 +1,5 @@
+I changed `load` in `src/store.ts` so `createStore` no longer throws on a corrupt `NOTES_FILE`. If the file can't be parsed, or parses to something other than an array, it is renamed to `<file>.corrupt` and the store starts empty.
+
+I haven't run the type check or the tests (the command needed approval and I didn't retry it). I also didn't add a test for the corrupt-file case.
+
+If a `<file>.corrupt` already exists, the rename overwrites it, so only the most recent corrupt file is kept.

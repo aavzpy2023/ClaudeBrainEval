@@ -1,0 +1,17 @@
+taskq upgrades an old database in place with a lightweight migration. It runs in `Repository._connect()` (`taskq/repository.py:54-74`) every time a connection is opened:
+
+1. **Create the table if missing.** It runs `CREATE TABLE IF NOT EXISTS tasks` with only the original base columns, `id` and `payload`. An existing table is left alone.
+2. **Check what's there.** It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. **Add each missing column.** Each of these gets an `ALTER TABLE ... ADD COLUMN` if it's absent:
+   - `status`, `NOT NULL DEFAULT 'pending'`
+   - `lease_expires`, nullable
+   - `priority`, `NOT NULL DEFAULT 5` (`DEFAULT_PRIORITY`)
+   - `attempts`, `NOT NULL DEFAULT 0`
+   - `not_before`, nullable
+
+Because the added columns have defaults or allow NULL, existing rows stay valid. Old tasks become `pending`, priority 5, with 0 attempts and no backoff or lease. The checks are idempotent, so a current database is a no-op.
+
+There are a few limits:
+- There is no schema version number (`PRAGMA user_version`). It detects columns by name, so it can only add columns, not rename, drop or retype them.
+- The check-then-`ALTER` isn't wrapped in a lock. Two processes opening an old DB at the same moment could race, and the loser would hit a "duplicate column" `OperationalError`. I haven't verified that.
+- Old cwd-relative `./taskq.db` files are not migrated to the new default path (`~/.taskq/queue.db`). You have to point `TASKQ_DB` at them. Once you do, the column migration above applies.

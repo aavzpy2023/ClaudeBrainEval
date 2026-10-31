@@ -1,0 +1,3 @@
+It answers **404** with the JSON body `{ "error": "Note not found" }` (`src/server.ts:96`).
+
+A successful delete answers 204 with no body. Deleting the same id a second time therefore gives 404, as does an id that never existed. This is deliberate, and the code comment says it is so clients notice stale ids. The test at `test/notes.test.ts:181` covers it.

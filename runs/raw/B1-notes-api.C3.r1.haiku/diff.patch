@@ -1,0 +1,46 @@
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..028c466 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -24,9 +24,15 @@ export type NoteStore = {
+ // TODO(open question, no owner yet): persistence is only safe for a single process. Concurrent writes
+ // from several processes can lose updates (each rewrites the whole file from its own in-memory copy).
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
++// An unparseable file is moved aside to `<file>.corrupt` so the server can start; the store then begins empty.
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  try {
++    return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  } catch {
++    renameSync(file, `${file}.corrupt`);
++    return [];
++  }
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..9f2574b 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -1,6 +1,6 @@
+ import { after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
++import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import { createStore } from '../src/store.ts';
+@@ -42,4 +42,12 @@ describe('note store persistence', () => {
+     writeFileSync(file, JSON.stringify([{ id: 'x', title: 't', body: 'b', createdAt: 0 }]));
+     assert.equal(createStore(undefined, file).get('x')?.createdAt, '1970-01-01T00:00:00.000Z');
+   });
++
++  it('moves an unparseable file aside and starts empty', () => {
++    const file = fileIn('corrupt.json');
++    writeFileSync(file, '{not json');
++    assert.deepEqual(createStore(undefined, file).list(), []);
++    assert.equal(readFileSync(file + '.corrupt', 'utf8'), '{not json');
++    assert.equal(existsSync(file), false);
++  });
+ });

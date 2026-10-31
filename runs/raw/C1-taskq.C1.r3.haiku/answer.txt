@@ -1,0 +1,10 @@
+`taskq list --limit N` is in place, with and without `--json`. The full suite passes (28 tests, including three new ones for this feature).
+
+- **Behavior:** the limit applies in SQL as `ORDER BY id LIMIT ?`, so it returns the first N tasks in insertion order. Without `--limit`, output is unchanged.
+- **Validation:** `0` or a negative value makes argparse exit with status 2 and print a usage error. Non-integers are rejected the same way.
+- **Changes:**
+  - `taskq/repository.py`: `list_tasks(limit=None)`.
+  - `taskq/cli.py`: a `_positive_int` type and the `--limit` option on `list`, passed through to both output paths.
+  - `tests/test_cli.py`: tests for the plain limit, the limit with `--json`, and rejection of `0` and `-3` with exit status 2.
+
+I did not commit the change.

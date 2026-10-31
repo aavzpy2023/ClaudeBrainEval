@@ -1,0 +1,10 @@
+`taskq list --limit N` is in place, and it works with and without `--json`. The suite passes: 28 tests, 3 of them new.
+
+- **Behaviour:** `list --limit N` prints at most N tasks, oldest first (by id, which is insertion order). The limit is applied in SQL via `LIMIT`, so the database returns only N rows.
+- **Usage error:** `--limit 0` or a negative value prints `--limit must be at least 1` to stderr and exits with status 2. The check is in `main()` only for the `list` command.
+- **Changes:**
+  - `taskq/repository.py`: `list_tasks(limit=None)`. SQL stays in `Repository`, and the default (no limit) is unchanged.
+  - `taskq/cli.py`: the `--limit` option on `list`, plus the validation and passing it to both output paths.
+  - `tests/test_cli.py`: tests for the limit in plain output, in JSON output, and for the rejected values `0` and `-3`.
+
+I haven't committed anything. The diff is in the working tree of `taskq`.

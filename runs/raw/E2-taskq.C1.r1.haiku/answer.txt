@@ -1,0 +1,17 @@
+Taskq upgrades old database files automatically, on every connection. The logic is in `Repository._connect()` in `taskq/repository.py`, around lines 54–74:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (id, payload)`, so a file with no `tasks` table gets one.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. For each newer column it is missing (`status`, `lease_expires`, `priority`, `attempts`, `not_before`), it runs an `ALTER TABLE ... ADD COLUMN` with a default.
+
+Rows from the old version pick up those defaults: `status` becomes `'pending'`, `priority` becomes `DEFAULT_PRIORITY`, `attempts` becomes `0`, and `lease_expires` and `not_before` become NULL. `tests/test_repository.py` (`test_migrates_old_schema`) covers this. It creates a bare `id`/`payload` table, inserts a row, and checks that `claim()` returns that row and `list_tasks()` reports priority 5.
+
+Things to be aware of:
+
+- **No version number.** Migration is driven by checking which columns exist, not by a schema version, so there is nothing to tell a file's version apart from this code's.
+- **Runs on every connect.** The check is cheap, but it means any connection can change the schema, including a read-only command like `list`.
+- **Not one transaction.** Each `ALTER` probably commits on its own, so a crash partway through leaves some columns added. The next connection re-checks and adds the rest, so it recovers.
+- **Newer files are not rejected.** A database written by a later version with extra columns is opened without complaint, and this code ignores columns it doesn't know about.
+- **Other paths.** The default location moved to `~/.taskq/queue.db` in commit 3f22710. Migration only applies to the file that `Repository` opens, so an old database at a previous path is not picked up unless it is passed explicitly.
+
+I read the code and the test but did not run the test suite.

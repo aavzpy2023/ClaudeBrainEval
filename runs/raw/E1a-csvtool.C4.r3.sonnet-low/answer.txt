@@ -1,0 +1,10 @@
+Per the project history: **No, it hasn't been decided in favor of auto-detection. The current decision is no auto-detection.**
+
+- `--delim` is a flag on all subcommands. It defaults to comma, `\t` means tab, and it applies to both input and output.
+- The user decides, as far as I can tell. The history doesn't name anyone as the owner of this question. It's recorded as a settled design choice, not an open one.
+
+The things that are still open are different:
+- Whether `--format json` should be JSON Lines or a single array.
+- The empty-cell policy that blocks `mean`. The history says that one has no owner.
+
+This comes from the session digest, not from reading the repo. I haven't checked the code or any docs in it.

@@ -1,0 +1,3 @@
+`DELETE /notes/:id` answers **404** with the body `{"error":"Note not found"}` when the note doesn't exist. When the note does exist, it answers 204 with no body. The code is at `src/server.ts:94-99`.
+
+The project digest still says DELETE is idempotent and returns 204. That is out of date. Commit `cfa5650` ("Make DELETE strict") changed it so clients notice stale ids.

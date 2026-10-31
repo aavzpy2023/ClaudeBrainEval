@@ -1,0 +1,16 @@
+It migrates the file in place when the `Repository` opens it, in `taskq/repository.py:57-73`:
+
+1. It runs `CREATE TABLE IF NOT EXISTS tasks (...)`, which does nothing if the table already exists.
+2. It reads the existing columns with `PRAGMA table_info(tasks)`.
+3. It runs `ALTER TABLE tasks ADD COLUMN ...` for each column that's missing:
+   - `status` defaults to `'pending'`.
+   - `lease_expires` is nullable.
+   - `priority` defaults to 5.
+   - `attempts` defaults to 0.
+   - `not_before` is nullable.
+
+Old rows therefore come out as pending tasks with default priority, no retries used and no backoff delay. There's no schema version number. Each column is checked on its own, so a file from any older version gets whichever columns it lacks.
+
+The one exception is the old cwd-relative `./taskq.db`. That path is no longer used, so the file isn't opened. You have to point `TASKQ_DB` at it, and it then gets migrated like any other old file.
+
+I only read the migration code. I didn't run it against an old-format database.

@@ -1,0 +1,8 @@
+`taskq list` now takes `--limit N`, with or without `--json`. The full suite passes, including the two new tests.
+
+- **Limit:** it shows at most N tasks, in insertion order. A limit larger than the number of tasks just shows them all.
+- **Bad values:** 0, a negative number or a non-integer is a usage error. argparse prints a message and exits with status 2.
+- **Where it is:** the parser change is in `taskq/cli.py`. I slice the results in the CLI and left `list_tasks()` in `taskq/repository.py` alone. It still fetches every task, which is fine at this size.
+- **Tests:** the new tests in `tests/test_cli.py` cover plain and JSON output with a limit, and the status-2 error for `0`, `-1` and `x`.
+
+I haven't committed anything.

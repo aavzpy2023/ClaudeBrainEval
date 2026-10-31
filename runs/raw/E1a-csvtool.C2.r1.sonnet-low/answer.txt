@@ -1,0 +1,5 @@
+Yes, it has been decided: csvtool does not auto-detect the delimiter. The `--delim` flag sets it explicitly. It defaults to comma, `\t` means tab, and it applies to both input and output.
+
+The project notes don't name a person who made or owns that decision. They record it only as a project decision, so I can't say who is responsible for it.
+
+The two choices that are still undecided are related but different. They are the final JSON format for `head` and the empty-cell/`mean` policy, and the notes say neither has an owner.

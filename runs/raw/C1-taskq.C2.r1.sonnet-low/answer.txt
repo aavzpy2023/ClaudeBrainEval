@@ -1,0 +1,7 @@
+`taskq list --limit N` now works with and without `--json`. It shows at most N tasks in insertion order. All 27 tests pass, including two new ones I added.
+
+- **Validation:** a value below 1, or a non-integer, is a usage error with exit status 2. Argparse handles this through a small `_positive_int` check in `taskq/cli.py`.
+- **Query:** `Repository.list_tasks` in `taskq/repository.py` now takes an optional `limit`, so the SQL stays in `Repository`. Without `--limit` it returns every task, as before.
+- **Tests:** in `tests/test_cli.py`, one covers `--limit` in plain and JSON output, and one covers `0`, `-1` and `x` exiting with 2.
+
+I haven't committed anything.

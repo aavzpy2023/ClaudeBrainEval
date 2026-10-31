@@ -1,0 +1,7 @@
+**Why it happened:** `claim` did a SELECT to find the next task, then an UPDATE to mark it running. Python's `sqlite3` doesn't open a transaction before a SELECT (only before DML like UPDATE). Two workers could therefore both SELECT the same pending task, and each then UPDATE it, so both were handed the same task.
+
+**The fix:** `claim` now runs `BEGIN IMMEDIATE` before the SELECT. That takes SQLite's write lock up front, so the select-then-update is atomic. A second worker waits until the first commits, then sees the task as already `running`.
+
+**Rejected alternative:** a lock file. It was not used because of the user's choice. The project notes say "No lock file, by the user's choice."
+
+The `_after_select_hook` test hook in `Repository` exists so tests can exercise the window between the SELECT and the UPDATE.

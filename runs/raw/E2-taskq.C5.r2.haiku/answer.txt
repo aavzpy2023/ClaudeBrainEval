@@ -1,0 +1,22 @@
+Taskq upgrades an old database in place when it opens it. There is no separate migration step or version check. The logic is in `Repository._connect()` (`taskq/repository.py`), which runs on every connection:
+
+1. `CREATE TABLE IF NOT EXISTS tasks (id, payload)` creates the base table if the file is empty or missing.
+2. `PRAGMA table_info(tasks)` lists the existing columns.
+3. For each newer column (`status`, `lease_expires`, `priority`, `attempts`, `not_before`) that is missing, it runs `ALTER TABLE tasks ADD COLUMN ...`.
+
+The original schema (commit `9910dd1`, `taskq/storage.py`) had only `id` and `payload`. An old file gets the new columns with defaults that suit existing rows:
+
+- `status` = `'pending'`, so old tasks are claimable.
+- `priority` = 5, the default.
+- `attempts` = 0.
+- `not_before` and `lease_expires` = NULL, meaning no backoff and no lease.
+
+Things to be aware of:
+
+- **Concurrent first open can fail.** Two processes that open an old database at the same moment can both see a column as missing. The second `ALTER` then raises "duplicate column name". Nothing catches that. The fix would be to run the migration inside `BEGIN IMMEDIATE`, or to catch the duplicate-column error and carry on.
+- **Each `ALTER` commits on its own.** A crash part-way leaves some columns added and others not. The next open finishes the job, so this is safe, just not atomic.
+- **The check runs on every connection.** It is cheap, but it means every CLI call does a schema read.
+- **A stuck-row risk I did not confirm.** A `running` row with NULL `lease_expires` never matches the claim query, because `NULL <= ?` is not true. I could not confirm whether any released version ever wrote `running` without a lease. I did not check the history of the earlier `status` and lease columns.
+- **Path mismatch in the notes.** The comment in `repository.py` says the old default was `./tasks.db`. The project notes say `./taskq.db`. The migration does not move or import old files either way, so the notes' advice to set `TASKQ_DB` still applies.
+
+I did not run anything against a real old database, and I did not add a test for this path. The existing tests all create fresh databases. A useful next step would be a test that builds a payload-only table, opens it through `Repository`, and checks that existing rows are claimable with priority 5. I can write that test if you want.

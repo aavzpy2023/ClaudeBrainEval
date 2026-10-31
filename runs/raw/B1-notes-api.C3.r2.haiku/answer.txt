@@ -1,0 +1,13 @@
+`createStore` now recovers from a corrupt `NOTES_FILE` instead of throwing. An unparseable file is moved to `<file>.corrupt` and the store starts empty. `node --test` passes with 29 tests, including a new one for this case.
+
+Changes, in `notes-api/`:
+
+- **`src/store.ts`**: `load` wraps the `JSON.parse` in a try/catch. On a `SyntaxError` it renames the file to `<file>.corrupt` and returns `[]`. Other errors, such as a read failure, still throw.
+- **`test/persistence.test.ts`**: a new test writes `{not json`, checks that the store is empty and the original file is gone, checks that the bad bytes sit in `.corrupt`, and checks that a later create persists normally.
+
+Two decisions to check:
+
+- **Only parse errors are caught.** A file that parses but isn't an array of notes will still fail later, which I left alone since the request only covered unparseable files.
+- **An existing `.corrupt` file is overwritten.** A second corrupt file replaces the first `.corrupt` backup, because `rename` replaces it on POSIX. Keeping several backups would need a timestamped name.
+
+I did not commit. The TODO about multi-process safety in `store.ts` is unchanged.

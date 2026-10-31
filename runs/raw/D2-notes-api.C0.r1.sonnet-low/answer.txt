@@ -1,0 +1,3 @@
+It answers **404** with the JSON body `{ "error": "Note not found" }` (`src/server.ts:96`). A successful delete answers `204` with no body.
+
+The strict 404 is deliberate, so clients notice stale ids. A repeated DELETE on the same id therefore also gets 404. The test at `test/notes.test.ts:181` covers both cases.

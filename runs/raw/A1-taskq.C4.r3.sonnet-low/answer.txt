@@ -1,0 +1,9 @@
+**Why it happened.** `claim` did a SELECT to find the next claimable task and then an UPDATE to mark it running. Python's `sqlite3` module only opens an implicit transaction before DML (INSERT, UPDATE, DELETE). The SELECT therefore ran outside any transaction and took no lock. Two workers could both SELECT the same row before either one's UPDATE landed, and both were handed that task.
+
+**How it was fixed (commit `3b07992`).** `Repository.claim` in `taskq/repository.py` now runs `conn.execute("BEGIN IMMEDIATE")` before the SELECT. That takes SQLite's write lock up front. The SELECT and UPDATE then run as one atomic unit, and a concurrent worker waits for the lock instead of reading the same row. `fail` uses the same pattern.
+
+A test hook, `_after_select_hook`, sleeps between the SELECT and the UPDATE. This widens the race window so the test reproduces the bug reliably. The test in `tests/test_repository.py` runs two threads on a barrier.
+
+**Rejected alternative.** A separate lock file to serialize claims was rejected, by your choice. `BEGIN IMMEDIATE` already gives the guarantee inside SQLite, so a lock file would add a second mechanism and more failure modes, such as stale locks.
+
+The rejection comes from the project notes. I didn't check the commit message, so I haven't confirmed the reasoning behind it.

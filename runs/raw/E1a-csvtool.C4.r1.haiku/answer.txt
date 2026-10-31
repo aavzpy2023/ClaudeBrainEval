@@ -1,0 +1,5 @@
+No, it hasn't been decided, and nobody owns the decision.
+
+The code says so directly. `main.go:17-19` has a TODO marked "open question, NO OWNER" that asks whether csvtool should auto-detect the delimiter. It states that this is not decided and deliberately not implemented, and that `--delim` stays explicit with a comma default. I also checked the code and tests: nothing performs detection, and `--delim` is passed through to every subcommand.
+
+Who decides isn't recorded anywhere I can find. The project notes only say that the open questions have no owner, and they name one other undecided item (the empty-cell policy for `mean`) that is in the same position. Someone with authority over the project would have to pick an owner, or make the call directly. Until then, the current behavior, explicit `--delim` with a comma default, is the one to keep. I haven't changed anything.

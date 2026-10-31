@@ -4,6 +4,7 @@
   "arms": [
     {"name": "haiku", "model": "haiku", "effort": "low", "reps": 5, "phases": ["pilot", "main"]},
     {"name": "sonnet-low", "model": "sonnet", "effort": "low", "reps": 5, "phases": ["pilot", "main"]},
+    {"name": "sonnet-medium", "model": "sonnet", "effort": "medium", "reps": 5, "phases": []},
     {"name": "opus-low", "model": "opus", "effort": "low", "reps": 3, "phases": ["main"],
      "conditions": ["C0", "C3", "C5"], "task_subset": "opus"}
   ],

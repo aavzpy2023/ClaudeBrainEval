@@ -1,0 +1,10 @@
+`createStore` now recovers from an unparseable `NOTES_FILE`. It moves the file to `<file>.corrupt` and starts with an empty store instead of throwing. `node --test` passes all 30 tests, including two new ones for this case.
+
+The change is in `src/store.ts`. `load` wraps `JSON.parse` in a try/catch, and on failure renames the file to `<file>.corrupt`. The new tests are in `test/persistence.test.ts`. One checks that the bad bytes are preserved in `.corrupt` and the store is empty. The other checks that the store still persists normally after recovery.
+
+Two things to know:
+
+- **I may have discarded an uncommitted change.** When I started, `git status` was clean. A notice then said `src/store.ts` had changed on disk, but the content it showed matched HEAD. Before I had seen that notice, I ran `git checkout src/store.ts` to undo a stray blank line I had added. That reset the file to HEAD. The only change I can account for is my own blank line, but if you had an edit in progress there, it's gone. Check your editor or any backups if that matters.
+- **Not committed.** The changes are in the working tree only.
+
+The rename itself is not guarded. If moving the corrupt file fails (for example, a permissions error), `createStore` will still throw. Wrapping the rename in a try/catch would close that gap, but it would also hide the case where the corrupt file stays in place. I left that choice to you.

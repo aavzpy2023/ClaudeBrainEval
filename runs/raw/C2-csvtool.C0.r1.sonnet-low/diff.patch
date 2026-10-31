@@ -1,0 +1,105 @@
+diff --git a/csvtool.go b/csvtool.go
+index d74c10b..745344c 100644
+--- a/csvtool.go
++++ b/csvtool.go
+@@ -218,6 +218,28 @@ func HeadJSON(r io.Reader, w io.Writer, n int, delim rune, lazy bool) error {
+ 	return bw.Flush()
+ }
+ 
++// Columns writes the header's column names from r to w, one per line. Empty
++// input prints nothing. Only the header is read.
++func Columns(r io.Reader, w io.Writer, delim rune, lazy bool) error {
++	cr := csv.NewReader(r)
++	cr.Comma = delim
++	cr.LazyQuotes = lazy
++	cr.FieldsPerRecord = -1
++	header, err := cr.Read()
++	if err == io.EOF {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	bw := bufio.NewWriter(w)
++	for _, h := range header {
++		bw.WriteString(h)
++		bw.WriteByte('\n')
++	}
++	return bw.Flush()
++}
++
+ // ErrMissingColumn is returned by Select when a requested column is not in the header.
+ var ErrMissingColumn = errors.New("missing column")
+ 
+diff --git a/csvtool_test.go b/csvtool_test.go
+index 18a695f..28d4003 100644
+--- a/csvtool_test.go
++++ b/csvtool_test.go
+@@ -97,6 +97,20 @@ func TestOpenStdin(t *testing.T) {
+ 	}
+ }
+ 
++func TestColumns(t *testing.T) {
++	var sb strings.Builder
++	if err := Columns(strings.NewReader("a;b\"x;c\n1;2;3\n"), &sb, ';', true); err != nil {
++		t.Fatal(err)
++	}
++	if want := "a\nb\"x\nc\n"; sb.String() != want {
++		t.Errorf("got %q, want %q", sb.String(), want)
++	}
++	sb.Reset()
++	if err := Columns(strings.NewReader(""), &sb, ',', false); err != nil || sb.Len() != 0 {
++		t.Errorf("empty input: got %q, err %v", sb.String(), err)
++	}
++}
++
+ func TestHead(t *testing.T) {
+ 	tests := []struct {
+ 		n    int
+diff --git a/main.go b/main.go
+index 3c02ac8..3658c77 100644
+--- a/main.go
++++ b/main.go
+@@ -10,7 +10,7 @@ import (
+ 	"unicode/utf8"
+ )
+ 
+-const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
++const usage = "usage: csvtool head [-n N] [--format json] <file>\n       csvtool select -c name,age <file>\n       csvtool filter --where 'age>30' <file>\n       csvtool stats -c age <file>   (count and sum)\n       csvtool columns <file>   (print header column names, one per line)\n(every subcommand accepts --delim C, a single character, default ',', and --lazy-quotes to tolerate stray quotes in fields; use - as <file> to read standard input)"
+ 
+ // delimFlag registers --delim on fs and returns a func that resolves it.
+ //
+@@ -128,12 +128,33 @@ func main() {
+ 		d, err := delim()
+ 		fail(err)
+ 		fail(runStats(fs.Arg(0), *c, d, *lazy))
++	case "columns":
++		fs := flag.NewFlagSet("columns", flag.ExitOnError)
++		delim := delimFlag(fs)
++		lazy := lazyFlag(fs)
++		fs.Parse(os.Args[2:])
++		if fs.NArg() != 1 {
++			fmt.Fprintln(os.Stderr, usage)
++			os.Exit(2)
++		}
++		d, err := delim()
++		fail(err)
++		fail(runColumns(fs.Arg(0), d, *lazy))
+ 	default:
+ 		fmt.Fprintln(os.Stderr, usage)
+ 		os.Exit(2)
+ 	}
+ }
+ 
++func runColumns(path string, delim rune, lazy bool) error {
++	f, err := open(path)
++	if err != nil {
++		return err
++	}
++	defer f.Close()
++	return Columns(f, os.Stdout, delim, lazy)
++}
++
+ // fail exits 2 for a missing column, 1 for any other error.
+ func fail(err error) {
+ 	if err == nil {

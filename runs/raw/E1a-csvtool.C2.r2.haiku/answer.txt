@@ -1,0 +1,5 @@
+**No, auto-detection hasn't been decided, and nobody is named as the owner.**
+
+The code says so directly. The TODO above `delimFlag` in `main.go` (around lines 17-20) reads "open question, NO OWNER". It states that auto-detection has not been decided and is deliberately not implemented. Until someone decides, `--delim` stays explicit, with a default of comma. The `--delim` commit (`1004441`) introduced this behavior, and the tests (`csvtool_test.go`, `TestDelimFlag` and `TestDelimAllSubcommands`) cover the explicit flag only.
+
+The question of an owner is still open. Nothing in the repo or the commit history names one. If you want to settle it, the person who sets the project's direction would need to decide whether detection is in scope, and I can record that decision in the TODO once it's made. Until then, I'd leave the flag as the only way to set the delimiter.

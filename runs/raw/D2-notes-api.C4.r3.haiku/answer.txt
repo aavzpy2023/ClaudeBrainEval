@@ -1,0 +1,10 @@
+DELETE `/notes/:id` returns **404** with the JSON body `{"error":"Note not found"}` when the note does not exist. The handler is at `src/server.ts:96`:
+
+```ts
+// Strict: 404 when the note does not exist, so clients notice stale ids.
+if (!store.delete(id)) return sendJson(res, 404, { error: 'Note not found' });
+```
+
+A successful delete returns 204 with no body.
+
+The project digest from session start says DELETE is idempotent and returns 204 for unknown ids. That is out of date. Commit `cfa5650` ("Make DELETE strict: 404 when the note does not exist") changed it, and the code matches the commit.
