@@ -105,6 +105,15 @@ to save subscription quota (arm disabled in `bench/matrix.json`); those rows are
 - Cost metrics: new input, cache creation, cache read, output tokens, turns, latency, and the
   CLI's `total_cost_usd` (relative cost only: the subscription is not billed per token).
   Cold-cache and warm-cache reported separately.
+  Token counts are the measurement; prices are not. Prices change, so no cost conversion is made while
+  running. Each run keeps the CLI's final `result` event (in `transcript.jsonl.zst`), whose `usage` is the
+  sum over the subject model's API calls and whose `modelUsage` breaks tokens down per model (a Sonnet run
+  also shows about 1 k tokens of Haiku helper calls, which are priced separately and reported as
+  overhead). Cache creation is split by cache tier (5 m / 1 h), which are priced differently. At analysis
+  time the provider's price list of that date is saved in the repo (`analysis/prices.json`, with source and
+  date) and applied to the four token components; `cost_usd_est` in `results.csv` is the CLI's own estimate
+  at run time and is provisional. Cost is reported as a weighted figure with the four components always
+  shown, never as a plain sum of input tokens.
 - Quality: 0-2 rubric (A, D) by two blind judges; test pass rate (B, C).
 - Joint: cost per correct answer.
 - Retrieval behaviour (C4): whether the model searched the archive, how often, and whether it did so
