@@ -112,35 +112,87 @@ the main ledger `runs/` starts empty and the pilot rows are not counted as repet
   models; declared in section 8): Haiku and Sonnet (low) run the full design (5 reps). Sonnet at medium effort is added in the pilot only, to see whether effort changes the memory effect; it enters the main phase only if the pilot shows it matters. Its pilot was stopped after 12 runs
 to save subscription quota (arm disabled in `bench/matrix.json`); those rows are kept and reported as a partial arm. Opus runs a
   pre-fixed subset (15 tasks, 3 per category), conditions C0/C3/C5 only, 3 reps (135 runs).
-  The Opus subset size is subject to the pilot: it is adjusted to the runs that fit the
-  subscription quota, and frozen with `prereg-v1`. Cross-model comparisons use only tasks and
+  Six pilot Opus runs cost about 2.6 times a Sonnet-low run (CLI estimate), which keeps the 135 runs
+  within the quota plan, so the subset is kept as designed. Pre-registered fallback: if the first 30 Opus
+  runs use more quota than projected, the Opus arm drops to 2 reps (90 runs) before continuing. Cross-model comparisons use only tasks and
   conditions shared by the models compared. Primary model-dependence test: the
   `condition x model` interaction. Histories generated with Sonnet (low).
   Judges: a different model than the one answering; human check on a subsample; report Cohen's kappa.
 - Cost metrics: new input, cache creation, cache read, output tokens, turns, latency, and the
-  CLI's `total_cost_usd` (relative cost only: the subscription is not billed per token).
+  CLI's `total_cost_usd` (recorded for reference, not an outcome).
   Cold-cache and warm-cache reported separately.
   Token counts are the measurement; prices are not. Prices change, so no cost conversion is made while
   running. Each run keeps the CLI's final `result` event (in `transcript.jsonl.zst`), whose `usage` is the
   sum over the subject model's API calls and whose `modelUsage` breaks tokens down per model (a Sonnet run
   also shows about 1 k tokens of Haiku helper calls, which are priced separately and reported as
-  overhead). Cache creation is split by cache tier (5 m / 1 h), which are priced differently. At analysis
-  time the provider's price list of that date is saved in the repo (`analysis/prices.json`, with source and
-  date) and applied to the four token components; `cost_usd_est` in `results.csv` is the CLI's own estimate
-  at run time and is provisional. Cost is reported as a weighted figure with the four components always
-  shown, never as a plain sum of input tokens.
+  overhead). Cache creation is split by cache tier (5 m / 1 h). Outcomes are reported in tokens, not
+  money, because prices change over time and differ by plan. Dollar figures appear only as a dated
+  illustration in an appendix (provider's price list of that date saved as `analysis/prices.json`);
+  `cost_usd_est` in `results.csv` is the CLI's own estimate at run time and is never an outcome.
   Token counts depend on the model (its own tokenizer, prices and number of turns): models are never compared
   on raw totals. The effect of the memory system is the change relative to the same model's C0, and model
   dependence is tested with the condition x model interaction.
-- Quality: 0-2 rubric (A, D) by two blind judges; test pass rate (B, C).
-- Joint: cost per correct answer.
+- Quality: 0-2 rubric for question tasks (A, D, E) by two blind judges (section 6.1); test pass rate for code tasks.
+- Joint: input tokens per correct answer.
 - Retrieval behaviour (C4): whether the model searched the archive, how often, and whether it did so
   when the task needed it (E1) versus when it did not (A, C, E2). Read from the transcript's tool calls.
 - Stats: mixed model `metric ~ condition + category + (1|task)`, bootstrap CIs, effect sizes,
   Holm correction for pairwise comparisons against C0 and C5. Negative results reported.
 - A run that hits the subscription quota is logged `status=quota` and retried; it is never data.
 
-## 6.1 Exploratory goal: adaptive activation (not part of the pre-registered tests)
+## 6.1 Pre-registered analysis plan
+
+All runs come from a Claude Pro subscription, which is not billed per token; outcomes are measured in tokens.
+
+**Primary cost outcome.** Total input tokens of a run for the subject model: new input + cache creation +
+cache read, summed over all its API calls (H1). Analysed on the log scale, so effects are ratios. Model:
+`log(tokens) ~ condition * model + category + (1 | task)`, fitted per family of contrasts below on the tasks
+and conditions every compared model shares. Uncertainty: 95% CIs from a cluster bootstrap that resamples
+tasks (10 000 resamples); the mixed model is reported alongside.
+Because cache reads are processed far more cheaply than fresh input, the primary total is always shown
+with its components. Key secondary outcomes: uncached input (new + cache creation), cache read, output
+tokens (including thinking), turns, latency, first-call (briefing) tokens, and helper-model tokens.
+
+**Confirmatory contrasts** (Holm correction across this family, alpha 0.05):
+1. H1: C3 vs C0 input tokens on A, and on B (two contrasts).
+2. H2: non-inferiority of C3 vs C0 quality: question tasks, lower 95% bound of the mean rubric difference
+   above -0.25; code tasks, lower 95% bound of the pass-rate difference above -5 pp (two contrasts).
+3. H3: C2 vs C1 input tokens on A and B pooled.
+4. H4: C3 vs C0 input tokens on C; C3 vs C0 quality on D (two contrasts).
+5. H5: the `condition x model` interaction for C3 vs C0 input tokens (Haiku vs Sonnet on all shared tasks;
+   Opus on its subset).
+6. H6: C4 vs C3 quality on E1, and C3 vs C0 input tokens on E2 (two contrasts).
+Everything else (C5 comparisons, per-project effects, retrieval behaviour, 6.2) is reported as secondary
+or exploratory, with effect sizes and CIs and no significance claims.
+
+**Repetitions.** The pilot gave a median within-cell coefficient of variation of 0.10 for total input
+tokens, so 5 repetitions give a within-cell standard error near 4.5%, below the smallest effect of
+interest (a 10% change in input tokens). Between-task variation dominates the uncertainty of category means and is
+handled by the task-level bootstrap. Repetition counts are fixed here and not changed after seeing results.
+
+**Run validity and exclusions** (decided before the main phase, never based on outcomes):
+- `leak` (global instructions found in the transcript): invalid, rerun; the leak count is reported.
+- `quota` and `error` (CLI failure before an answer): rerun, up to 3 attempts; a run that still fails is
+  reported as missing, never imputed.
+- Timeout (900 s) or an answer that does not do the task: a valid run, quality 0 or tests failed, tokens counted.
+- No run is removed for being an outlier; a sensitivity analysis drops the top 1% of input tokens per arm.
+
+**Judges for question tasks.** Each answer is scored 0-2 against the task's reference facts: 2 when every
+fact is stated correctly and nothing contradicts them; 1 when some are right and none is contradicted;
+0 when the answer is wrong, missing, or asserts a value the reference marks as outdated (category D).
+Two judges per answer, both different from the model that answered (Haiku answers: Sonnet and Opus;
+Sonnet answers: Haiku and Opus; Opus answers: Haiku and Sonnet), single turn, no tools, with the task
+prompt, reference facts and the answer only: condition, model and briefing are hidden. The final score
+is the mean of the two judges. Agreement is reported as weighted Cohen's kappa. The author scores a
+stratified random 10% of answers blind to condition, and judge-human kappa is reported. Judging prompts
+are fixed in `judge/` before the first judgment.
+
+**Schedule and model drift.** The main phase runs in the seeded random order across several 5-hour and
+weekly quota windows. `meta.json` records the resolved model id and CLI version per run. If either changes
+during the main phase, the change is noted in Amendments with its date, and analyses are repeated with the
+version as a covariate.
+
+## 6.2 Exploratory goal: adaptive activation (not part of the pre-registered tests)
 
 The digest costs a fixed number of tokens on every session start, and the results are expected to be
 task-dependent (RQ4, RQ6). A practical consequence the data can inform: switching the briefing on or
@@ -195,7 +247,7 @@ and archived transcripts are raw evidence and still cite the original hashes; us
 - [ ] **P0** Repo, protocol, task checklist, runner skeleton. Exit: `status.py` and `run.py --dry-run` work.
 - [ ] **P1** (histories for taskq, notes-api and csvtool done, leak-checked and frozen; only the final review of the digests is pending) Three projects + history scripts + frozen snapshots. Exit: tests pass at every history commit; digests reviewed by hand.
 - [x] **P2** Task bank with oracles/rubrics (45 tasks, 15 per project, 9 per category; `bench/tasks/<project>.json`). Exit met: `verify_oracles.py` shows every B/C oracle failing on the base commit, passing with the reference solution, and the full suite staying green.
-- [ ] **P3** Pilot (about 10 tasks x 6 conditions x 3 reps, Haiku and Sonnet; a few Opus runs to measure quota use). Exit: measured size per run, variance estimate, power check, runs of Opus per quota window, protocol fixes.
+- [x] **P3** Pilot (about 10 tasks x 6 conditions x 3 reps, Haiku and Sonnet; a few Opus runs to measure quota use). Exit: measured size per run, variance estimate, power check, runs of Opus per quota window, protocol fixes.
 - [ ] **P4** Pre-register (`prereg-v1` tag), then main experiment in resumable batches.
 - [ ] **P5** Judging.
 - [ ] **P6** Analysis (`analysis/`, regenerated by one command).

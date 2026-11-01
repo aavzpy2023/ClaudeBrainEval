@@ -1,0 +1,5 @@
+**Why it happened:** `claim()` ran its SELECT and its UPDATE as two separate steps, and the SELECT wasn't inside a transaction. Python's `sqlite3` only opens a transaction on its own before INSERT, UPDATE or DELETE, so the SELECT held no lock. Two workers could both read the same pending row before either one's UPDATE took the write lock. Both then marked the task `running` and returned it.
+
+**How it was fixed** (commit `3b07992`): `claim()` now runs `BEGIN IMMEDIATE` before the SELECT (`taskq/repository.py:134`). That takes the write lock first, so a second worker waits until the first commits and then sees the task as `running`. `fail()` uses the same pattern. A regression test runs two threads and uses `_after_select_hook` to sleep between the SELECT and the UPDATE, which makes the race happen every time. The test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** a lock file around claims. You chose not to use one, so the fix relies only on SQLite's own locking. That comes from my notes on earlier sessions; the commit message doesn't mention it.

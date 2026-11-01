@@ -377,3 +377,9 @@ D1-taskq.C1.r1.sonnet-low,D1-taskq,taskq,D,C1,1,sonnet-low,sonnet,low,ok,4,10732
 A1-taskq.C2.r2.haiku,A1-taskq,taskq,A,C2,2,haiku,haiku,low,ok,4,12655,54083,1142,3,9.2,0.00377403,,,2026-10-31T02:02:06+00:00
 E1a-csvtool.C3.r2.sonnet-low,E1a-csvtool,csvtool,E,C3,2,sonnet-low,sonnet,low,ok,2,10226,21458,305,1,6.1,0.0462363,,,2026-10-31T02:02:16+00:00
 D2-notes-api.C1.r1.sonnet-low,D2-notes-api,notes-api,D,C1,1,sonnet-low,sonnet,low,ok,4,15467,58840,271,2,6.6,0.0706001,,,2026-10-31T02:02:22+00:00
+A1-taskq.C0.r1.opus-low,A1-taskq,taskq,A,C0,1,opus-low,opus,low,ok,8,32818,93350,870,4,14.0,0.2987768,,,2026-10-31T23:57:01+00:00
+A1-taskq.C3.r1.opus-low,A1-taskq,taskq,A,C3,1,opus-low,opus,low,ok,4,37878,36880,628,2,9.0,0.3231068,,,2026-10-31T23:57:15+00:00
+A1-taskq.C5.r1.opus-low,A1-taskq,taskq,A,C5,1,opus-low,opus,low,ok,2,13689,23101,554,1,10.2,0.1253975,,,2026-10-31T23:57:25+00:00
+B1-notes-api.C0.r1.opus-low,B1-notes-api,notes-api,B,C0,1,opus-low,opus,low,ok,8,17621,134185,1715,8,22.0,0.2022776,,1,2026-10-31T23:57:35+00:00
+B1-notes-api.C3.r1.opus-low,B1-notes-api,notes-api,B,C3,1,opus-low,opus,low,ok,8,14557,121521,1605,7,22.4,0.1730318,,1,2026-10-31T23:57:58+00:00
+B1-notes-api.C5.r1.opus-low,B1-notes-api,notes-api,B,C5,1,opus-low,opus,low,ok,8,18181,139885,2045,8,25.4,0.2144971,,1,2026-10-31T23:58:20+00:00

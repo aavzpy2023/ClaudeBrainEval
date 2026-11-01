@@ -1,0 +1,9 @@
+The fix is commit `3b07992`, "Fix duplicate task hand-out when workers claim concurrently".
+
+**Why it happened:** `claim()` ran its `SELECT` and its `UPDATE` as two separate steps, and the `SELECT` was not inside a transaction. Python's `sqlite3` only opens a transaction on its own just before an INSERT, UPDATE or DELETE, so the `SELECT` held no lock. Two workers could both select the same pending row before either one's `UPDATE` took the write lock. Both then marked the row running and returned it.
+
+**How it was fixed:** `claim()` now runs `conn.execute("BEGIN IMMEDIATE")` before the `SELECT`. That takes SQLite's write lock up front, so a second worker waits until the first has committed and then sees the task as running. A comment in the code explains why the explicit `BEGIN` is needed. The SQL has since moved into `taskq/repository.py`.
+
+**Regression test:** `test_concurrent_claims_never_return_the_same_task` runs two threads that claim at the same moment. A test hook, `_after_select_hook`, sleeps 0.3s between the `SELECT` and the `UPDATE` so the race happens every time. The commit says the test fails without `BEGIN IMMEDIATE` and passes with it.
+
+**Rejected alternative:** I couldn't find one recorded. The commit message, the code comments and the git history don't mention any other approach for this fix. The only "rejected" note in the repo is about a different decision: "higher number = more urgent" was turned down for priorities, in `taskq/repository.py:28`. If an alternative was discussed, such as an atomic `UPDATE ... RETURNING` or a version column, it wasn't written down here.

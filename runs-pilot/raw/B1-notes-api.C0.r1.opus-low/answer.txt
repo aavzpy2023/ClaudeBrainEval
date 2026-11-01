@@ -1,0 +1,9 @@
+A corrupt `NOTES_FILE` no longer crashes the server at startup. `createStore` now renames the unreadable file to `<file>.corrupt` and starts with an empty store. All 29 tests pass, including a new one in `test/persistence.test.ts` that checks the file is moved aside with its contents intact and the store comes up empty.
+
+The change is in `load()` in `src/store.ts`:
+- **What counts as corrupt:** a JSON parse error, or valid JSON that isn't an array (for example `{}`). I included the second case because it would otherwise crash later when the notes are loaded.
+- **What still throws:** errors reading the file, such as a permissions problem, still stop startup. I didn't want a temporary I/O error to quietly reset everyone's notes.
+
+If a `<file>.corrupt` already exists from an earlier recovery, the new one replaces it, so only the most recent bad file is kept.
+
+I haven't committed anything.

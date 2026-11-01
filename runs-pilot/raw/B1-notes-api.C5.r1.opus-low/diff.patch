@@ -1,0 +1,71 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index ea37228..ef1050c 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -8,9 +8,9 @@ Decisions and why (later ones supersede earlier ones):
+ - `createdAt` is stored as epoch ms (UTC) and returned as ISO-8601 UTC. `list()` sorts newest first, with insertion order as the tie-break.
+ - Validation: `title` is required, non-empty, at most 120 UTF-16 units. `body` is optional (default `''`), at most 10000. Invalid content returns 422 `{"error":{"code":"validation_failed",...}}`. Malformed JSON returns 400 `{error:'Invalid JSON'}`.
+ - **Supersedes the `Object.assign` PATCH:** PATCH accepts only `title` and `body`. Any other field, an empty patch, or an invalid value returns 422 (strict, because silent drops hide client bugs). Root cause of the bug: the raw body was `Object.assign`ed onto the stored note, so `id` and `createdAt` could be overwritten. `store.patch` now copies only those two fields.
+-- Persistence: if `NOTES_FILE` is set, notes load at startup, or the store starts empty if the file is missing. Every change rewrites the file atomically (temp file `<file>.<pid>.tmp`, then rename).
++- Persistence: if `NOTES_FILE` is set, notes load at startup, or the store starts empty if the file is missing. If the file can't be parsed (or isn't a JSON array), it is renamed to `<file>.corrupt` and the store starts empty. Read errors such as permissions still throw. Every change rewrites the file atomically (temp file `<file>.<pid>.tmp`, then rename).
+ 
+-Current state: all routes work. `node --test` passes 28 tests. Latest commits are `7affb30` (persistence) and `26cc749` (PATCH fix). No type-check has been run.
++Current state: all routes work. `node --test` passes 29 tests. Latest commits are `7affb30` (persistence) and `26cc749` (PATCH fix). No type-check has been run.
+ 
+ Files (in `notes-api/`):
+ - `src/store.ts`: `createStore(now?, file?)`, `patch`
+@@ -23,6 +23,5 @@ Files (in `notes-api/`):
+ 
+ Open issues:
+ - TODO in `src/store.ts`: multi-process safety (file lock vs. SQLite) is an open question nobody owns.
+-- A corrupt `NOTES_FILE` makes startup fail with a JSON parse error. Nothing handles it.
+ - Crash mid-write is untested.
+ - No type-check has been run.
+diff --git a/src/store.ts b/src/store.ts
+index a5dfbe6..eaaecea 100644
+--- a/src/store.ts
++++ b/src/store.ts
+@@ -26,7 +26,16 @@ export type NoteStore = {
+ // Options: a file lock, or moving to SQLite. Not decided; do not assume either.
+ function load(file: string): StoredNote[] {
+   if (!existsSync(file)) return [];
+-  return JSON.parse(readFileSync(file, 'utf8')) as StoredNote[];
++  const text = readFileSync(file, 'utf8');
++  try {
++    const parsed: unknown = JSON.parse(text);
++    if (Array.isArray(parsed)) return parsed as StoredNote[];
++  } catch (err) {
++    if (!(err instanceof SyntaxError)) throw err;
++  }
++  // Unparseable (or not an array): keep it for inspection and start empty rather than failing startup.
++  renameSync(file, `${file}.corrupt`);
++  return [];
+ }
+ 
+ // Write a temp file next to the target, then rename over it, so a crash never leaves a half-written file.
+diff --git a/test/persistence.test.ts b/test/persistence.test.ts
+index e38ba84..830b389 100644
+--- a/test/persistence.test.ts
++++ b/test/persistence.test.ts
+@@ -1,6 +1,6 @@
+ import { after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
++import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import { createStore } from '../src/store.ts';
+@@ -42,4 +42,13 @@ describe('note store persistence', () => {
+     writeFileSync(file, JSON.stringify([{ id: 'x', title: 't', body: 'b', createdAt: 0 }]));
+     assert.equal(createStore(undefined, file).get('x')?.createdAt, '1970-01-01T00:00:00.000Z');
+   });
++
++  it('moves a corrupt file aside and starts empty', () => {
++    const file = fileIn('corrupt.json');
++    writeFileSync(file, '{not json');
++    const store = createStore(undefined, file);
++    assert.deepEqual(store.list(), []);
++    assert.equal(readFileSync(`${file}.corrupt`, 'utf8'), '{not json');
++    assert.equal(existsSync(file), false);
++  });
+ });

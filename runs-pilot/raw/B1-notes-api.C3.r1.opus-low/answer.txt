@@ -1,0 +1,8 @@
+A corrupt `NOTES_FILE` no longer crashes the server at startup. `createStore` now moves the unreadable file to `<file>.corrupt` and starts with an empty store. `node --test` passes all 29 tests, including a new one for this case.
+
+- **The fix (`src/store.ts`, in `load`):** if the file can't be parsed as JSON, it gets renamed aside instead of throwing. A file that is valid JSON but not an array (for example `{}`) is handled the same way, since the store couldn't use it anyway. A missing file still just starts empty, as before.
+- **The test (`test/persistence.test.ts`):** writes `{not json` to the file, then checks that the store is empty, `<file>.corrupt` holds the original contents, and the original file is gone.
+
+Decision for you: if `<file>.corrupt` already exists from an earlier failure, the rename silently overwrites it. If you'd rather keep every bad copy, I can add a timestamp to the name.
+
+I haven't committed the change.

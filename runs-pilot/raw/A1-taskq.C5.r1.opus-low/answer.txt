@@ -1,0 +1,11 @@
+Going by the project notes in `CLAUDE.md`:
+
+**Why it happened:** Python's `sqlite3` module doesn't open a transaction before a `SELECT`. So in `claim`, two workers could both run the SELECT that finds the next claimable task and both see the same row before either wrote its UPDATE. Each then marked it as theirs, and both got the same task.
+
+**How it was fixed:** `claim` now runs `BEGIN IMMEDIATE` before the SELECT. That takes SQLite's write lock at the start, so the select and the update happen as one step. A second worker has to wait until the first commits, and by then the task is already `running` with its 60 s lease, so the second worker skips it.
+
+**Rejected alternative:** a lock file. The notes say it was left out "by the user's choice". They don't give a reason, but the database lock already provides the same guarantee without an extra file.
+
+There's a test hook, `_after_select_hook` in `Repository`, that can pause a worker between the SELECT and the UPDATE, which looks like it's meant to reproduce this race.
+
+I took this from the notes and didn't check the code. The commit hashes in `CLAUDE.md` don't match the real history: it says the latest is `201960d`, but `git log` shows `09b1f94`. The notes may have been written against a different copy of the repo, so it's worth confirming `BEGIN IMMEDIATE` is actually in `taskq/repository.py`.
